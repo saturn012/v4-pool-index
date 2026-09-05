@@ -64,7 +64,7 @@ function makeInitialize(
   return event;
 }
 
-test("maps a public Initialize log with all raw fields", () => {
+test("maps an independent public Initialize log with all raw fields", () => {
   let id = Bytes.fromHexString(
     "0x9ca021d16b63ba396c457583fe462dde99506caa2a149c5285e26ecdae57c998",
   );
@@ -74,7 +74,7 @@ test("maps a public Initialize log with all raw fields", () => {
   let currency1 = Address.fromString(
     "0x05a3d1cd21d0c88145e82600e62e7e496e0f222b",
   );
-  let zeroHooks = Address.fromString(
+  let hooks = Address.fromString(
     "0x97c21ad990db9dc8cfd19713574fbdf2697f68cc",
   );
   let tx = Bytes.fromHexString(
@@ -88,7 +88,7 @@ test("maps a public Initialize log with all raw fields", () => {
       currency1,
       2500,
       60,
-      zeroHooks,
+      hooks,
       BigInt.fromString("78212785280997392003103750"),
       -138420,
       55373313,
@@ -102,7 +102,7 @@ test("maps a public Initialize log with all raw fields", () => {
   assert.fieldEquals("Pool", id.toHexString(), "currency1", currency1.toHexString());
   assert.fieldEquals("Pool", id.toHexString(), "fee", "2500");
   assert.fieldEquals("Pool", id.toHexString(), "tickSpacing", "60");
-  assert.fieldEquals("Pool", id.toHexString(), "hooks", zeroHooks.toHexString());
+  assert.fieldEquals("Pool", id.toHexString(), "hooks", hooks.toHexString());
   assert.fieldEquals(
     "Pool",
     id.toHexString(),
