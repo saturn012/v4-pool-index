@@ -1,0 +1,13 @@
+type Pool @entity(immutable: true) {
+  id: Bytes!
+  currency0: Bytes!
+  currency1: Bytes!
+  fee: Int!
+  tickSpacing: Int!
+  hooks: Bytes!
+  initSqrtPriceX96: BigInt!
+  initTick: Int!
+  createdAtBlock: BigInt!
+  createdAtTimestamp: BigInt!
+  createdAtTx: Bytes!
+}
