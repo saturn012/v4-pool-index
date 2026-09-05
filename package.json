@@ -1,0 +1,18 @@
+{
+  "name": "v4-pool-index",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Robinhood Chain Uniswap v4 Initialize subgraph",
+  "license": "MIT",
+  "scripts": {
+    "codegen": "graph codegen",
+    "build": "graph build",
+    "test": "matchstick"
+  },
+  "devDependencies": {
+    "@graphprotocol/graph-cli": "0.98.1",
+    "@graphprotocol/graph-ts": "0.38.2",
+    "assemblyscript": "0.28.20",
+    "matchstick-as": "0.6.0"
+  }
+}
