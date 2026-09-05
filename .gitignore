@@ -3,3 +3,4 @@ build/
 generated/
 tests/.latest.json
 .DS_Store
+tests/.bin/
