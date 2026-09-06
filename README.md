@@ -12,7 +12,13 @@ The first implementation attempt in this repository is a Graph subgraph for Robi
 
 During deployment research, Subgraph Studio reported that subgraphs are no longer supported on Robinhood Chain. The project direction is therefore moving to Substreams for the Initialize indexer. This repository has not yet received a working provider Initialize response for that route: the Substreams module is not implemented and no package has been published. The last checked CLI path returned `Unauthenticated`, so access is not confirmed.
 
-The decision gate is the end of 8 September (MSK). If provider access is still unavailable then, the Graph track will be closed and effort will move to Privy. README and fixture hygiene continue independently of that provider gate.
+The move to Substreams is based on the public network registry: Robinhood exposes Substreams endpoints while Studio does not support classical Subgraphs for this network. The project owner will obtain any required token through the self-service flow; no third-party permission is being awaited. This is not evidence of a successful live Initialize stream: no authenticated live run has been completed, no Substreams module has been implemented, and no package has been published. README and fixture hygiene continue independently.
+
+## AI assistance disclosure
+
+AI tools assisted with research into the indexing options, documentation drafting and review, and iteration on test and implementation ideas. The human project owner made the substantive project decisions: selecting the one-event scope, verifying public sources, defining the fixture privacy gate, reviewing changes, and deciding what is published. No assistant identity is presented as a human author.
+
+For a spec-driven submission, the project will provide sanitized public versions of the relevant specifications, prompts, and planning material. Private system data, credentials, and private correspondence will be removed before publication; the submission will not replace those facts with claims that are not true. This work does not establish ETHGlobal continuity or prize eligibility.
 
 ## Network and deployment floor
 
