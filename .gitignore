@@ -4,3 +4,7 @@ generated/
 tests/.latest.json
 .DS_Store
 tests/.bin/
+.substreams.env
+*.env
+target/
+*.spkg
