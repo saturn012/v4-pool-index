@@ -1,0 +1,35 @@
+specVersion: v0.1.0
+package:
+  name: v4_pool_index
+  version: v0.1.0
+  url: https://github.com/saturn012/v4-pool-index
+  description: Reusable Uniswap v4 PoolManager Initialize identity module for Robinhood Chain
+
+protobuf:
+  files:
+    - pool/v1/pool.proto
+  importPaths:
+    - ./proto
+  excludePaths:
+    - google
+    - sf/substreams
+
+binaries:
+  default:
+    type: wasm/rust-v1
+    file: ./target/wasm32-unknown-unknown/release/substreams.wasm
+
+network: robinhood
+
+modules:
+  - name: map_initialize
+    kind: map
+    initialBlock: 9070
+    inputs:
+      - source: sf.ethereum.type.v2.Block
+    output:
+      type: proto:pool.v1.PoolInitializations
+    doc: |
+      Emits PoolManager Initialize identity fields for downstream packages.
+      The output is composable: a downstream map may declare `map: map_initialize`
+      as its input. Swap and ModifyLiquidity are intentionally out of scope.
