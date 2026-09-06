@@ -6,6 +6,14 @@
 
 This repository indexes only Initialize on the Uniswap v4 PoolManager. It stores both currencies exactly as emitted, raw fee, tickSpacing, hooks, initial square-root price, initial tick, block, timestamp, and transaction hash. It does not index swaps or liquidity changes, calculate prices or USD values, interpret dynamic fees, or infer token orientation.
 
+## Direction update: Subgraph to Substreams
+
+The first implementation attempt in this repository is a Graph subgraph for Robinhood Chain. It remains in the first twelve commits as an honest record of that work.
+
+During deployment research, Subgraph Studio reported that subgraphs are no longer supported on Robinhood Chain. The project direction is therefore moving to Substreams for the Initialize indexer. This repository has not yet received a working provider Initialize response for that route: the Substreams module is not implemented and no package has been published. The last checked CLI path returned `Unauthenticated`, so access is not confirmed.
+
+The decision gate is the end of 8 September (MSK). If provider access is still unavailable then, the Graph track will be closed and effort will move to Privy. README and fixture hygiene continue independently of that provider gate.
+
 ## Network and deployment floor
 
 - Network: Robinhood Chain mainnet (robinhood)
