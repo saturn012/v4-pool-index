@@ -16,9 +16,11 @@ The move to Substreams is based on the public network registry: Robinhood expose
 
 ## AI assistance disclosure
 
-AI tools assisted with research into the indexing options, documentation drafting and review, and iteration on test and implementation ideas. The human project owner made the substantive project decisions: selecting the one-event scope, verifying public sources, defining the fixture privacy gate, reviewing changes, and deciding what is published. No assistant identity is presented as a human author.
+AI tools assisted with the implementation and tests in this repository: the Initialize mapping in src/pool-manager.ts, schema.graphql, subgraph.yaml, tests/initialize.test.ts, and the related ABI/package configuration. AI tools also assisted with provider research, README drafting, and automated verification runs.
 
-For a spec-driven submission, the project will provide sanitized public versions of the relevant specifications, prompts, and planning material. Private system data, credentials, and private correspondence will be removed before publication; the submission will not replace those facts with claims that are not true. This work does not establish ETHGlobal continuity or prize eligibility.
+The human project owner supplied the requirements, made product and scope decisions, and authorized repository actions and publication. No assistant identity is presented as a human author, and this statement does not claim manual source or code review that is not evidenced here.
+
+The spec-driven submission artifacts are pending: sanitized public specifications, prompts, and planning material still need a completeness review before submission. They will be edited only to remove secrets and private data while retaining an accurate disclosure of AI use; that safe public set is not yet complete. This work does not establish ETHGlobal continuity or prize eligibility.
 
 ## Network and deployment floor
 
