@@ -10,7 +10,7 @@ This package is the downstream half of the composition proof. It imports the pub
 
 ## Reproduce
 
-From this directory, with a Substreams API token available through the normal CLI environment:
+From the repository root, with a Substreams API token available through the normal CLI environment:
 
 ```sh
 cargo build --manifest-path consumer/Cargo.toml --release --target wasm32-unknown-unknown
