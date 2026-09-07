@@ -49,6 +49,25 @@ mod tests {
     use super::*;
     use substreams::hex;
 
+    const INITIALIZE_TOPIC: [u8; 32] =
+        hex!("dd466e674ea557f56295e2d0218a125ea4b4f0f6f3307b95f85e6110838d6438");
+    const FOREIGN_ADDRESS: [u8; 20] = hex!("4444444444444444444444444444444444444444");
+    const INVALID_TOPIC: [u8; 32] = [0u8; 32];
+
+    fn initialize_log(address: &[u8; 20], topic: &[u8; 32]) -> eth::Log {
+        eth::Log {
+            address: address.to_vec(),
+            topics: vec![
+                topic.to_vec(),
+                hex!("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa").to_vec(),
+                hex!("0000000000000000000000001111111111111111111111111111111111111111").to_vec(),
+                hex!("0000000000000000000000002222222222222222222222222222222222222222").to_vec(),
+            ],
+            data: hex!("00000000000000000000000000000000000000000000000000000000000009c4ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc400000000000000000000000033333333333333333333333333333333333333330000000000000000000000000000000000000000000000000000000000000001ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc4").to_vec(),
+            ..Default::default()
+        }
+    }
+
     #[test]
     fn decodes_initialize_event_shape_from_synthetic_fixture() {
         // Synthetic values only: this fixture is not a mainnet observation.
@@ -85,5 +104,47 @@ mod tests {
         );
         assert_eq!(event.sqrt_price_x96.to_u64(), 1);
         assert_eq!(event.tick.to_string(), "-60");
+    }
+
+    #[test]
+    fn maps_only_pool_manager_initialize_logs_from_a_successful_receipt() {
+        // Synthetic values only: this fixture is not a mainnet observation.
+        let block = eth::Block {
+            transaction_traces: vec![eth::TransactionTrace {
+                status: 1,
+                receipt: Some(eth::TransactionReceipt {
+                    logs: vec![
+                        initialize_log(&super::POOL_MANAGER, &INITIALIZE_TOPIC),
+                        initialize_log(&FOREIGN_ADDRESS, &INITIALIZE_TOPIC),
+                        initialize_log(&super::POOL_MANAGER, &INVALID_TOPIC),
+                    ],
+                    ..Default::default()
+                }),
+                ..Default::default()
+            }],
+            ..Default::default()
+        };
+
+        let output = __impl_map_initialize(block).expect("synthetic block must map");
+        assert_eq!(output.pools.len(), 1);
+        let pool = &output.pools[0];
+        assert_eq!(
+            pool.pool_id,
+            hex!("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+        );
+        assert_eq!(
+            pool.currency0,
+            hex!("1111111111111111111111111111111111111111")
+        );
+        assert_eq!(
+            pool.currency1,
+            hex!("2222222222222222222222222222222222222222")
+        );
+        assert_eq!(pool.fee, 2500);
+        assert_eq!(pool.tick_spacing, -60);
+        assert_eq!(pool.hooks, hex!("3333333333333333333333333333333333333333"));
+
+        let empty = __impl_map_initialize(eth::Block::default()).expect("empty block must map");
+        assert!(empty.pools.is_empty());
     }
 }
