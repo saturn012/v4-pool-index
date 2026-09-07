@@ -1297,6 +1297,7 @@ dependencies = [
  "anyhow",
  "ethabi",
  "getrandom 0.2.17",
+ "hex",
  "hex-literal 0.4.1",
  "prost 0.13.5",
  "prost-build 0.13.5",

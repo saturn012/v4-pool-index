@@ -15,7 +15,25 @@ use substreams_ethereum::pb::eth::v2 as eth;
 
 substreams_ethereum::init!();
 
-const POOL_MANAGER: [u8; 20] = hex!("8366a39cc670b4001a1121b8f6a443a643e40951");
+const ROBINHOOD_POOL_MANAGER: [u8; 20] = hex!("8366a39cc670b4001a1121b8f6a443a643e40951");
+
+fn pool_manager_from_params(params: &str) -> Result<[u8; 20], Error> {
+    let value = params.trim();
+    let value = value.strip_prefix("pool_manager=").unwrap_or(value).trim();
+    let value = value.strip_prefix("0x").unwrap_or(value);
+    if value.is_empty() {
+        return Ok(ROBINHOOD_POOL_MANAGER);
+    }
+
+    let bytes = hex::decode(value)
+        .map_err(|error| Error::msg(format!("invalid pool_manager hex: {error}")))?;
+    bytes.try_into().map_err(|bytes: Vec<u8>| {
+        Error::msg(format!(
+            "pool_manager must be 20 bytes, got {}",
+            bytes.len()
+        ))
+    })
+}
 
 /// Extract the Uniswap v4 PoolManager Initialize event into a reusable stream.
 ///
@@ -23,9 +41,10 @@ const POOL_MANAGER: [u8; 20] = hex!("8366a39cc670b4001a1121b8f6a443a643e40951");
 /// downstream package can consume `map_initialize` without depending on this
 /// repository's Graph subgraph schema or on any price/liquidity interpretation.
 #[substreams::handlers::map]
-pub fn map_initialize(block: eth::Block) -> Result<PoolInitializations, Error> {
+pub fn map_initialize(params: String, block: eth::Block) -> Result<PoolInitializations, Error> {
+    let pool_manager = pool_manager_from_params(&params)?;
     let pools = block
-        .events::<abi::pool_manager::events::Initialize>(&[&POOL_MANAGER])
+        .events::<abi::pool_manager::events::Initialize>(&[&pool_manager])
         .map(|(event, _log)| PoolInitialization {
             pool_id: event.id.to_vec(),
             currency0: event.currency0.to_vec(),
@@ -114,9 +133,9 @@ mod tests {
                 status: 1,
                 receipt: Some(eth::TransactionReceipt {
                     logs: vec![
-                        initialize_log(&super::POOL_MANAGER, &INITIALIZE_TOPIC),
+                        initialize_log(&super::ROBINHOOD_POOL_MANAGER, &INITIALIZE_TOPIC),
                         initialize_log(&FOREIGN_ADDRESS, &INITIALIZE_TOPIC),
-                        initialize_log(&super::POOL_MANAGER, &INVALID_TOPIC),
+                        initialize_log(&super::ROBINHOOD_POOL_MANAGER, &INVALID_TOPIC),
                     ],
                     ..Default::default()
                 }),
@@ -125,7 +144,7 @@ mod tests {
             ..Default::default()
         };
 
-        let output = __impl_map_initialize(block).expect("synthetic block must map");
+        let output = __impl_map_initialize(String::new(), block).expect("synthetic block must map");
         assert_eq!(output.pools.len(), 1);
         let pool = &output.pools[0];
         assert_eq!(
@@ -144,7 +163,23 @@ mod tests {
         assert_eq!(pool.tick_spacing, -60);
         assert_eq!(pool.hooks, hex!("3333333333333333333333333333333333333333"));
 
-        let empty = __impl_map_initialize(eth::Block::default()).expect("empty block must map");
+        let empty = __impl_map_initialize(String::new(), eth::Block::default())
+            .expect("empty block must map");
         assert!(empty.pools.is_empty());
+    }
+    #[test]
+    fn accepts_a_network_specific_pool_manager_parameter() {
+        let base = hex!("498581ff718922c3f8e6a244956af099b2652b2b");
+        let output = __impl_map_initialize(
+            "pool_manager=0x498581ff718922c3f8e6a244956af099b2652b2b".to_string(),
+            eth::Block::default(),
+        )
+        .expect("base pool manager parameter must decode");
+        assert!(output.pools.is_empty());
+        assert_eq!(
+            pool_manager_from_params("pool_manager=0x498581ff718922c3f8e6a244956af099b2652b2b")
+                .expect("base address must parse"),
+            base
+        );
     }
 }

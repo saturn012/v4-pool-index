@@ -3,7 +3,7 @@ package:
   name: v4_pool_index
   version: v0.1.0
   url: https://github.com/saturn012/v4-pool-index
-  description: Reusable Uniswap v4 PoolManager Initialize identity module for Robinhood Chain
+  description: Multi-network Uniswap v4 PoolManager Initialize identity module
 
 protobuf:
   files:
@@ -20,16 +20,36 @@ binaries:
     file: ./target/wasm32-unknown-unknown/release/substreams.wasm
 
 network: robinhood
+params:
+  map_initialize: "pool_manager=0x8366a39cc670b4001a1121b8f6a443a643e40951"
+
+# The same initialize-only module is reusable on both networks. The network
+# override supplies the PoolManager address and the earliest block to inspect;
+# callers may still use -s/-t for bounded live runs.
+networks:
+  robinhood:
+    initialBlock:
+      map_initialize: 9070
+    params:
+      map_initialize: "pool_manager=0x8366a39cc670b4001a1121b8f6a443a643e40951"
+  base:
+    initialBlock:
+      map_initialize: 0
+    params:
+      map_initialize: "pool_manager=0x498581ff718922c3f8e6a244956af099b2652b2b"
 
 modules:
   - name: map_initialize
     kind: map
     initialBlock: 9070
     inputs:
+      - params: string
       - source: sf.ethereum.type.v2.Block
     output:
       type: proto:pool.v1.PoolInitializations
     doc: |
       Emits PoolManager Initialize identity fields for downstream packages.
+      The network manifest supplies a PoolManager parameter; an explicit
+      -p map_initialize=pool_manager=0x... may override it for a bounded run.
       The output is composable: a downstream map may declare `map: map_initialize`
       as its input. Swap and ModifyLiquidity are intentionally out of scope.
