@@ -12,9 +12,11 @@ The project indexes only `PoolManager.Initialize` on Robinhood Chain. The origin
 
 The first implementation attempt remains in the first twelve commits as an honest record of the classic Graph subgraph work. During deployment research, Subgraph Studio reported that subgraphs are no longer supported on Robinhood Chain. The project therefore moved the Initialize indexer to Substreams, whose public network registry lists Robinhood endpoints.
 
-The Substreams module is now implemented and tested offline. It uses `substreams-ethereum` ABI code generation and a single `map_initialize` module. The output is a protobuf message with repeated pool identities, so a downstream package can declare `map: map_initialize` as its input. This is an offline package artifact: no authenticated provider run, package publication, or live Initialize response is claimed here.
+The Substreams module is now implemented and tested offline. It uses `substreams-ethereum` ABI code generation and a single `map_initialize` module. The output is a protobuf message with repeated pool identities, so a downstream package can declare `map: map_initialize` as its input. The module has since been verified against live provider data. Streaming `map_initialize` from `mainnet.robinhood.streamingfast.io:443` over block 56634095 returned pool `0x74d24eb80e63c9008fa1fa845a05162fa18e44d97e7afc5f45f70bb70105aed2` (`fee` 989999, `tickSpacing` 9900, zero hooks) from transaction `0x94f1ff233e13e3d004914e992ae29e945498f057829c6a2305d4b62028b69f21`. Every field matches an independent decode of the same log, and across blocks 56634000-56634199 the module emitted exactly the three Initialize events an RPC log query reports for that range: no misses, no false positives. Note that block 9070 is the PoolManager deployment block and contains no Initialize event.
 
-The public ABI and contract metadata in this repository are protocol inputs, not evidence of a live stream. Provider authentication, a real network sample, and deployment remain separate follow-up work.
+The package is not yet published to a Substreams registry; that is the remaining step.
+
+The public ABI and contract metadata in this repository are protocol inputs rather than evidence in themselves; the live run described above is that evidence. Package publication to a Substreams registry remains the outstanding step.
 
 ## Substreams package
 
