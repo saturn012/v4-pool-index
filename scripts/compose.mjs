@@ -52,12 +52,15 @@ function decodeJsonValue(value) {
   }
 }
 
-export function poolsFromStreamObject(object) {
-  const decoded = decodeJsonValue(object);
-  const candidates = [decoded, decoded?.value, decoded?.data, decoded?.output, decoded?.["@data"]]
+function streamCandidates(value) {
+  const decoded = decodeJsonValue(value);
+  return [decoded, decoded?.value, decoded?.data, decoded?.output, decoded?.["@data"]]
     .map(decodeJsonValue)
     .filter(Boolean);
-  for (const candidate of candidates) {
+}
+
+export function poolsFromStreamObject(object) {
+  for (const candidate of streamCandidates(object)) {
     if (Array.isArray(candidate?.pools)) return candidate.pools.map(normalizePool).filter(Boolean);
     const one = normalizePool(candidate);
     if (one) return [one];
@@ -65,15 +68,11 @@ export function poolsFromStreamObject(object) {
   return [];
 }
 
-export function parseStreamText(text) {
-  const pools = [];
-  for (const line of text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean)) {
-    try {
-      pools.push(...poolsFromStreamObject(JSON.parse(line)));
-    } catch {
-      // Human-readable CLI progress lines are not composable input.
-    }
-  }
+function isValidEmptyRecord(object) {
+  return streamCandidates(object).some((candidate) => Array.isArray(candidate?.pools) && candidate.pools.length === 0);
+}
+
+function deduplicatePools(pools) {
   const seen = new Set();
   return pools.filter((pool) => {
     const key = `${pool.pool_id}:${pool.currency0}:${pool.currency1}`;
@@ -81,6 +80,51 @@ export function parseStreamText(text) {
     seen.add(key);
     return true;
   });
+}
+
+export function parseStreamTextDetailed(text) {
+  const lines = text.split(/\r?\n/).map((line, index) => ({ line: line.trim(), number: index + 1 })).filter(({ line }) => line);
+  const pools = [];
+  const malformedLines = [];
+  const unsupportedLines = [];
+  let emptyRecords = 0;
+  for (const { line, number } of lines) {
+    let object;
+    try {
+      object = JSON.parse(line);
+    } catch {
+      malformedLines.push(number);
+      continue;
+    }
+    const parsedPools = poolsFromStreamObject(object);
+    if (parsedPools.length > 0) pools.push(...parsedPools);
+    else if (isValidEmptyRecord(object)) emptyRecords += 1;
+    else unsupportedLines.push(number);
+  }
+  return {
+    pools: deduplicatePools(pools),
+    nonemptyLines: lines.length,
+    parsedRecords: lines.length - malformedLines.length - unsupportedLines.length,
+    emptyRecords,
+    malformedLines,
+    unsupportedLines,
+  };
+}
+
+export function parseStreamText(text) {
+  return parseStreamTextDetailed(text).pools;
+}
+
+function formatParseDiagnostic(parsed, text, prefix) {
+  const details = [];
+  if (parsed.malformedLines.length) details.push(`malformed JSON on line(s) ${parsed.malformedLines.join(", ")}`);
+  if (parsed.unsupportedLines.length) details.push(`unsupported record shape on line(s) ${parsed.unsupportedLines.join(", ")}`);
+  const trimmed = text.trim();
+  const multilineHint = trimmed.includes("\n") && /^[\[{]/.test(trimmed) && /[\]}]$/.test(trimmed);
+  const hint = multilineHint
+    ? " Input looks like pretty/multiline JSON; use one JSON object per line (--output jsonl)."
+    : " Expected one supported JSON object per line (JSONL).";
+  return `${prefix}${details.length ? `: ${details.join("; ")}` : "."}${hint}`;
 }
 
 export function isNativeCurrency(address) {
@@ -194,6 +238,10 @@ function usage() {
   console.error("Usage: node scripts/compose.mjs --network base --token-file ./token.txt [--input stream.jsonl] [--limit 10]");
 }
 
+function emptyComposition(network) {
+  return { network, source: { substreams_module: "map_initialize", token_api: TOKEN_API_URL }, pools: [] };
+}
+
 async function main() {
   const args = process.argv.slice(2);
   const value = (flag) => { const index = args.indexOf(flag); return index >= 0 ? args[index + 1] : null; };
@@ -209,7 +257,20 @@ async function main() {
     process.stdin.on("end", () => resolve(data));
     process.stdin.on("error", reject);
   });
-  process.stdout.write(`${JSON.stringify(await composePools({ pools: parseStreamText(text), network, tokenFile, limit }), null, 2)}\n`);
+  const parsed = parseStreamTextDetailed(text);
+  const hasIgnoredInput = parsed.malformedLines.length > 0 || parsed.unsupportedLines.length > 0;
+  if (parsed.nonemptyLines > 0 && parsed.parsedRecords === 0) {
+    console.error(formatParseDiagnostic(parsed, text, "No supported JSONL records parsed from non-empty input"));
+    process.exitCode = 1;
+    return;
+  }
+  if (hasIgnoredInput) {
+    console.error(formatParseDiagnostic(parsed, text, "Ignored malformed/unsupported JSONL input"));
+  }
+  const result = parsed.pools.length === 0
+    ? emptyComposition(network)
+    : await composePools({ pools: parsed.pools, network, tokenFile, limit });
+  process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
 }
 
 if (process.argv[1] && import.meta.url.endsWith(process.argv[1])) main().catch((error) => { console.error(error.message); process.exitCode = 1; });

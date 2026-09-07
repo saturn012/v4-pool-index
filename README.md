@@ -12,7 +12,19 @@ The project indexes only `PoolManager.Initialize` on Robinhood Chain and Base. T
 
 In v4, `pool_id` is a hash of the `PoolKey`; the identity stream can tell us which currencies and pool parameters were initialized, but it does not supply token names or holder counts. Pinax Token API supplies standardized token meaning, but it does not know which v4 pool produced the pair. Feeding the first product's output into the second makes one reproducible record that a rules engine can explain. This is a composition of two Graph products, not a claim that the entire Substreams platform cannot expose token metadata.
 
-The public composition layer is `scripts/compose.mjs`. It consumes JSONL output from `map_initialize`, enriches Base ERC-20 currencies through `https://api.pinax.network/v1/evm/tokens`, preserves native zero-address currencies, and returns provenance plus a deterministic technical decision.
+The public composition layer is `scripts/compose.mjs`. It consumes JSONL output from `map_initialize`, enriches Base ERC-20 currencies through `https://api.pinax.network/v1/evm/tokens`, preserves native zero-address currencies, and returns provider provenance plus a deterministic technical decision. The CLI now rejects non-empty input that contains no supported JSONL records, while a supported empty `pools` record remains a successful empty result; this keeps malformed or pretty/multiline JSON from silently becoming an empty composition.
+
+### Reproducible Base example
+
+A bounded read-only run at Base block `50994246` produced this pool identity:
+
+- `pool_id`: `0xfa7714c40e1de3c702b8c8052230072d41f3f36f949bca2a26e9147d678a3c22`
+- `currency0`: `0xd84af51aae54fe6df667e83a66291529b5456cdd` — `KING Robin` (`KING Robin`), 18 decimals, 4 holders
+- `currency1`: `0xf67fcf24bbbff934c79ffb09399122482a25594d` — `cajonosama` (`cajonosama`), 18 decimals, 358 holders
+- raw fee: `8388608`; tick spacing: `200`; hooks: `0x0469a4bd3724dc86c9542f4694c976da13c450c0`
+- decision: `REJECT`, because the nonzero hooks are not bounded by initialize-only evidence; the dynamic-fee flag in raw fee `8388608` remains `UNKNOWN`, not a fixed percentage
+
+The composed record preserves the Substreams source (`map_initialize`, Base), the Pinax Token API endpoint, provider fields, and observation timestamps. In this run the Token API supplied metadata for Base. That endpoint is unsupported for Robinhood Chain in this composition; Robinhood therefore remains Substreams-only here. This is an endpoint-coverage statement, not a claim that the whole platform cannot know token metadata.
 
 ## Deterministic decision layer
 
