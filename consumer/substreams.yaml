@@ -1,0 +1,44 @@
+specVersion: v0.1.0
+package:
+  name: v4_pool_index_consumer
+  version: v0.1.0
+  url: https://github.com/saturn012/v4-pool-index
+  description: Consumer digest composed from the published v4-pool-index map
+
+imports:
+  pools: v4-pool-index@v0.1.1
+
+protobuf:
+  files:
+    - consumer/v1/consumer.proto
+  importPaths:
+    - ./proto
+  excludePaths:
+    - google
+    - sf/substreams
+
+binaries:
+  default:
+    type: wasm/rust-v1
+    file: ./target/wasm32-unknown-unknown/release/consumer.wasm
+
+network: robinhood
+
+networks:
+  robinhood:
+    initialBlock:
+      map_pool_digest: 9070
+  base:
+    initialBlock:
+      map_pool_digest: 0
+
+modules:
+  - name: map_pool_digest
+    kind: map
+    inputs:
+      - map: pools:map_initialize
+    output:
+      type: proto:consumer.v1.PoolDigests
+    doc: |
+      Counts pools emitted by the published v4-pool-index map_initialize output
+      and records the two raw decision signals consumed by the downstream rules.

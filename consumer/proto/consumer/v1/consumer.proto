@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package consumer.v1;
+
+message PoolDigests {
+  uint64 pool_count = 1;
+  uint64 nonzero_hooks = 2;
+  uint64 dynamic_fee = 3;
+}
