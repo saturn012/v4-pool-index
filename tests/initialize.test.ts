@@ -64,6 +64,22 @@ function makeInitialize(
   return event;
 }
 
+// Fixture provenance:
+// The values below reproduce one public Robinhood Chain PoolManager
+// `Initialize` receipt. The pool id and currencies are indexed event fields;
+// fee, tick spacing, hook, initial price, initial tick, block, timestamp, and
+// transaction hash are the remaining fields from that same log.
+//
+// We intentionally retain this known public log. Two newer public-RPC
+// candidates were rejected by the pre-publication correlation gate because
+// their currencies already occurred in internal datasets. Replacing this test
+// with a merely different public address would therefore not make the fixture
+// independently selected.
+//
+// A future replacement must come from a public explorer/RPC and pass the same
+// current-dataset gate before it is committed. That gate documents provenance;
+// after retention cleanup, it is not a claim about every deleted historical
+// record.
 test("maps an independent public Initialize log with all raw fields", () => {
   let id = Bytes.fromHexString(
     "0x9ca021d16b63ba396c457583fe462dde99506caa2a149c5285e26ecdae57c998",

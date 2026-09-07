@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package pool.v1;
+
+// Reusable identity output for Uniswap v4 PoolManager Initialize events.
+message PoolInitializations {
+  repeated PoolInitialization pools = 1;
+}
+
+message PoolInitialization {
+  bytes pool_id = 1;
+  bytes currency0 = 2;
+  bytes currency1 = 3;
+  uint32 fee = 4;
+  int32 tick_spacing = 5;
+  bytes hooks = 6;
+}

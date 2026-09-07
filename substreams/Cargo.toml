@@ -1,0 +1,33 @@
+[package]
+name = "v4-pool-index-substreams"
+version = "0.1.0"
+edition = "2021"
+description = "Offline Uniswap v4 Initialize Substreams module for Robinhood Chain"
+repository = "https://github.com/saturn012/v4-pool-index"
+license = "MIT"
+
+[lib]
+name = "substreams"
+crate-type = ["cdylib"]
+
+[dependencies]
+ethabi = "17"
+hex-literal = "0.4"
+prost = "0.13"
+substreams = "0.7.6"
+substreams-ethereum = "0.11.1"
+
+# ethabi's transitive getrandom dependency needs the Substreams wasm hook.
+[target.wasm32-unknown-unknown.dependencies]
+getrandom = { version = "0.2", features = ["custom"] }
+
+[build-dependencies]
+anyhow = "1"
+prost-build = "0.13"
+protoc-bin-vendored = "3"
+substreams-ethereum = "0.11.1"
+
+[profile.release]
+lto = true
+opt-level = "s"
+strip = "debuginfo"
