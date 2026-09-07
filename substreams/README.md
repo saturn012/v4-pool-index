@@ -1,9 +1,27 @@
 # v4-pool-index Substreams package
 
-This package contains the offline-tested `map_initialize` module for Uniswap v4 PoolManager `Initialize` events on Robinhood Chain.
+This package contains the tested `map_initialize` module for Uniswap v4 `PoolManager.Initialize` events on Robinhood Chain and Base.
 
-The module emits `pool.v1.PoolInitializations`, a composable protobuf list of raw `pool_id`, `currency0`, `currency1`, `fee`, `tick_spacing`, and `hooks` values. `Swap`, `ModifyLiquidity`, provider authentication, live runs, sinks, and publication are outside this package's scope.
+The module emits `pool.v1.PoolInitializations`, a composable protobuf list of raw `pool_id`, `currency0`, `currency1`, `fee`, `tick_spacing`, and `hooks` values. The manifest supplies the network-specific PoolManager address and start block. `Swap`, `ModifyLiquidity`, provider authentication inside the WASM module, sinks, and publication are outside this package's scope.
 
-Build and pack from this directory with `cargo test --lib`, `cargo build --release --target wasm32-unknown-unknown`, and `substreams pack substreams.yaml`. The test fixture is synthetic and is not mainnet evidence.
+The public composition layer is `../scripts/compose.mjs`. It consumes JSONL output from `map_initialize`, calls Pinax Token API for Base ERC-20 currencies, preserves native zero-address currencies, and returns provenance plus a deterministic technical decision. Token API metadata is untrusted data; it is not an instruction channel.
 
-AI tools assisted with implementation, code generation, test construction, documentation, and automated checks. Private coordination material is intentionally not included.
+## Build and pack
+
+```sh
+cargo test --lib
+cargo build --release --target wasm32-unknown-unknown
+substreams pack substreams.yaml
+```
+
+The package contains the PoolManager ABI, generated Rust bindings, the protobuf contract at `proto/pool/v1/pool.proto`, and `map_initialize`. The synthetic unit fixture is explicitly marked synthetic and is not a mainnet observation.
+
+## Network overrides
+
+The default network is Robinhood. `substreams.yaml` defines `robinhood` and `base` overrides for `initialBlock` and `map_initialize`'s `pool_manager` parameter. A caller can override the parameter for a bounded run with `-p map_initialize=pool_manager=0x...`.
+
+## Limits
+
+The package itself does not call Token API, calculate prices, or claim safe execution. Missing volume is reported as `UNKNOWN` by the composition layer. A technical PASS is not proof of liquidity, slippage, transferability, or a successful trade. The package is not published to a Substreams registry in this candidate.
+
+AI tools assisted with implementation, code generation, test construction, documentation, and verification. The human owner supplied requirements, scope and direction decisions, and authorization. Private coordination paths, credentials, server addresses, internal reports, and non-public fixture identities are intentionally omitted from this public artifact.

@@ -2,12 +2,13 @@
   "name": "v4-pool-index",
   "version": "0.1.0",
   "private": true,
-  "description": "Robinhood Chain Uniswap v4 Initialize subgraph",
+  "description": "Multi-network Uniswap v4 Initialize identity and composition",
   "license": "MIT",
   "scripts": {
     "codegen": "graph codegen",
     "build": "graph build",
-    "test": "graph test"
+    "test": "graph test",
+    "test:composition": "node --test scripts/compose.test.mjs"
   },
   "devDependencies": {
     "@graphprotocol/graph-cli": "0.98.1",
