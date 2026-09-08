@@ -24,6 +24,19 @@ function payerError(code, message) {
   return new PayerClientError(code, message);
 }
 
+function redactSdkCause(error) {
+  const message = error instanceof Error ? error.message : "SDK threw a non-Error value";
+  return message
+    .replace(/\b0x[0-9a-f]{64}\b/gi, "[redacted]")
+    .replace(/\b(private(?:[_\s-]*key)?|(?:access[_\s-]*)?token|authorization|payment[_\s-]*signature)\b\s*([:=])\s*(?:Bearer\s+)?[^\s,;]+/gi, "$1$2[redacted]")
+    .replace(/\bBearer\s+[^\s,;]+/gi, "Bearer [redacted]")
+    .trim() || "SDK did not provide an error message";
+}
+
+function payerErrorWithSdkCause(code, message, error) {
+  return payerError(code, `${message}; SDK cause: ${redactSdkCause(error)}`);
+}
+
 function requirePayerKey(env) {
   const value = String(env[PAYER_PRIVATE_KEY_ENV] ?? "").trim();
   if (!/^0x[0-9a-fA-F]{64}$/.test(value)) {
@@ -78,8 +91,8 @@ function parseRequiredPayment(client, response, body) {
   let required;
   try {
     required = client.getPaymentRequiredResponse((name) => response.headers.get(name), body);
-  } catch (_) {
-    throw payerError("UNEXPECTED_PAYMENT_REQUIREMENT", "unable to parse the initial 402 payment requirements");
+  } catch (error) {
+    throw payerErrorWithSdkCause("UNEXPECTED_PAYMENT_REQUIREMENT", "unable to parse the initial 402 payment requirements", error);
   }
   if (required?.x402Version !== 2 || !Array.isArray(required.accepts) || required.accepts.length !== 1) {
     throw payerError("UNEXPECTED_PAYMENT_REQUIREMENT", "initial 402 must advertise exactly one x402 v2 payment requirement");
@@ -118,8 +131,8 @@ export async function runAssessClient({ argv, env = process.env, fetchImpl = fet
   let client;
   try {
     client = await createClient(privateKey);
-  } catch (_) {
-    throw payerError("CLIENT_INITIALIZATION_FAILED", "payer client could not be initialized; no request was sent");
+  } catch (error) {
+    throw payerErrorWithSdkCause("CLIENT_INITIALIZATION_FAILED", "payer client could not be initialized; no request was sent", error);
   }
   return runPaymentAttempt({ argv, fetchImpl, client });
 }
@@ -147,8 +160,8 @@ export async function runPaymentAttempt({ argv, fetchImpl = fetch, client }) {
   try {
     const payload = await client.createPaymentPayload(requirements);
     signatureHeaders = client.encodePaymentSignatureHeader(payload);
-  } catch (_) {
-    throw payerError("KNOWN_PAYMENT_REJECTION", "payment could not be created locally; no signed request was sent");
+  } catch (error) {
+    throw payerErrorWithSdkCause("KNOWN_PAYMENT_REJECTION", "payment could not be created locally; no signed request was sent", error);
   }
 
   let paid;
@@ -167,8 +180,8 @@ export async function runPaymentAttempt({ argv, fetchImpl = fetch, client }) {
   let settlement;
   try {
     settlement = client.getPaymentSettleResponse((name) => paid.headers.get(name));
-  } catch (_) {
-    throw payerError("UNKNOWN_PAYMENT_OUTCOME", "paid response settlement header could not be verified; do not retry automatically");
+  } catch (error) {
+    throw payerErrorWithSdkCause("UNKNOWN_PAYMENT_OUTCOME", "paid response settlement header could not be verified; do not retry automatically", error);
   }
   const transaction = requireSettlement(settlement);
   const body = await parseJson(paid, "UNKNOWN_PAYMENT_OUTCOME", "paid response body could not be verified; do not retry automatically");
@@ -183,14 +196,14 @@ export async function runPaymentAttempt({ argv, fetchImpl = fetch, client }) {
 }
 
 export async function createOfficialClient(privateKey) {
-  const [{ x402Client }, { registerExactEvmScheme }, { privateKeyToAccount }] = await Promise.all([
+  const [{ x402Client, x402HTTPClient }, { registerExactEvmScheme }, { privateKeyToAccount }] = await Promise.all([
     import("@x402/core/client"),
     import("@x402/evm/exact/client"),
     import("viem/accounts"),
   ]);
   const client = new x402Client();
   registerExactEvmScheme(client, { signer: privateKeyToAccount(privateKey) });
-  return client;
+  return new x402HTTPClient(client);
 }
 
 export function isMainModule(argv1 = process.argv[1]) {

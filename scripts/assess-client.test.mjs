@@ -1,8 +1,23 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { PayerClientError, buildAssessUrl, runAssessClient, runPaymentAttempt } from "./assess-client.mjs";
+import { PayerClientError, buildAssessUrl, createOfficialClient, runAssessClient, runPaymentAttempt } from "./assess-client.mjs";
 
 const poolId = `0x${"ab".repeat(32)}`;
+const syntheticPrivateKey = `0x${"11".repeat(32)}`;
+const payerHttpMethods = [
+  "getPaymentRequiredResponse",
+  "createPaymentPayload",
+  "encodePaymentSignatureHeader",
+  "getPaymentSettleResponse",
+];
+
+function assertFakeMatchesOfficial(fake, official) {
+  for (const method of payerHttpMethods) {
+    assert.equal(typeof official[method], "function", `official x402 client is missing ${method}`);
+    assert.equal(typeof fake[method], typeof official[method], `test fake diverges from official x402 client at ${method}`);
+  }
+}
+
 const expectedRequirement = {
   scheme: "exact",
   network: "eip155:84532",
@@ -48,7 +63,7 @@ test("missing payer key exits before client construction or network access", asy
 });
 
 test("client initialization redacts an opaque SDK error before any request", async () => {
-  const marker = "opaque-sdk-marker";
+  const marker = "synthetic-private-value";
   let fetchCalls = 0;
   await assert.rejects(
     runAssessClient({
@@ -56,13 +71,50 @@ test("client initialization redacts an opaque SDK error before any request", asy
       env: {},
       fetchImpl: async () => { fetchCalls += 1; },
       readPayerKey: () => marker,
-      createClient: async () => { throw new Error(`SDK rejected ${marker}`); },
+      createClient: async () => { throw new Error(`SDK rejected privateKey=${marker}`); },
     }),
     (error) => error instanceof PayerClientError &&
       error.code === "CLIENT_INITIALIZATION_FAILED" &&
+      error.message.includes("SDK cause: SDK rejected privateKey=[redacted]") &&
       !error.message.includes(marker),
   );
   assert.equal(fetchCalls, 0);
+});
+
+test("official client is the x402 HTTP wrapper required by the payer flow", async () => {
+  const client = await createOfficialClient(syntheticPrivateKey);
+  for (const method of payerHttpMethods) {
+    assert.equal(typeof client[method], "function", `official x402 client is missing ${method}`);
+  }
+});
+
+test("test fake matches the official x402 HTTP client and rejects a missing HTTP method", async () => {
+  const official = await createOfficialClient(syntheticPrivateKey);
+  const fake = fakeClient();
+  assertFakeMatchesOfficial(fake, official);
+
+  const divergentFake = { ...fake };
+  delete divergentFake.getPaymentRequiredResponse;
+  assert.throws(
+    () => assertFakeMatchesOfficial(divergentFake, official),
+    /test fake diverges from official x402 client at getPaymentRequiredResponse/,
+  );
+});
+
+test("402 parser retains a redacted SDK cause beside its machine-readable code", async () => {
+  const marker = "synthetic-payment-signature";
+  const client = fakeClient();
+  client.getPaymentRequiredResponse = () => {
+    throw new Error(`SDK parse failure PAYMENT-SIGNATURE=${marker} token=synthetic-token`);
+  };
+  await assert.rejects(
+    run({ client, fetchImpl: async () => response(402, { headers: { "payment-required": "synthetic" } }) }),
+    (error) => error instanceof PayerClientError &&
+      error.code === "UNEXPECTED_PAYMENT_REQUIREMENT" &&
+      error.message.includes("SDK cause: SDK parse failure PAYMENT-SIGNATURE=[redacted] token=[redacted]") &&
+      !error.message.includes(marker) &&
+      !error.message.includes("synthetic-token"),
+  );
 });
 
 test("rejects an unexpected 402 requirement before creating a payment payload", async () => {
