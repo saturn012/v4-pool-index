@@ -8,6 +8,15 @@ The project indexes only `PoolManager.Initialize` on Robinhood Chain and Base. T
 
 `Swap` and `ModifyLiquidity` are intentionally out of scope. No path calculates prices or USD values, interprets dynamic fees as fixed percentages, or enables a wallet, transaction, sink, or AlphaScanner bridge.
 
+## Code pointers (verified source commit)
+
+The links below are pinned to source commit `e647f3fa6acf5adc8d3ae40be5be2cad1ce4bd95` so a reviewer lands on the verified lines rather than on a moving branch:
+
+- PoolManager and `Initialize`: the Robinhood PoolManager address is `0x8366a39cc670b4001a1121b8f6a443a643e40951` in [`substreams/src/lib.rs`](https://github.com/saturn012/v4-pool-index/blob/e647f3fa6acf5adc8d3ae40be5be2cad1ce4bd95/substreams/src/lib.rs#L18); the verified `Initialize` topic0 is `0xdd466e674ea557f56295e2d0218a125ea4b4f0f6f3307b95f85e6110838d6438` in the test constant ([`substreams/src/lib.rs#L71-L72`](https://github.com/saturn012/v4-pool-index/blob/e647f3fa6acf5adc8d3ae40be5be2cad1ce4bd95/substreams/src/lib.rs#L71-L72)).
+- [`substreams/src/lib.rs#L44-L62`](https://github.com/saturn012/v4-pool-index/blob/e647f3fa6acf5adc8d3ae40be5be2cad1ce4bd95/substreams/src/lib.rs#L44-L62) filters `Initialize` logs by the selected PoolManager address, decodes the event, and emits the reusable pool fields.
+- [`substreams/proto/pool/v1/pool.proto#L5-L16`](https://github.com/saturn012/v4-pool-index/blob/e647f3fa6acf5adc8d3ae40be5be2cad1ce4bd95/substreams/proto/pool/v1/pool.proto#L5-L16) defines the protobuf output shape: `pool_id`, both currencies, raw `fee`, `tick_spacing`, and `hooks`.
+- [`scripts/compose.mjs#L208-L235`](https://github.com/saturn012/v4-pool-index/blob/e647f3fa6acf5adc8d3ae40be5be2cad1ce4bd95/scripts/compose.mjs#L208-L235) enriches the Substreams records with token metadata and provenance; [`scripts/compose.mjs#L155-L186`](https://github.com/saturn012/v4-pool-index/blob/e647f3fa6acf5adc8d3ae40be5be2cad1ce4bd95/scripts/compose.mjs#L155-L186) contains the deterministic hook, fee, tick-spacing, metadata, and final `PASS`/`REJECT`/`UNKNOWN` decision rules.
+
 ## What became easier through composition
 
 In v4, `pool_id` is a hash of the `PoolKey`; the identity stream can tell us which currencies and pool parameters were initialized, but it does not supply token names or holder counts. Pinax Token API supplies standardized token meaning, but it does not know which v4 pool produced the pair. Feeding the first product's output into the second makes one reproducible record that a rules engine can explain. This is a composition of two Graph products, not a claim that the entire Substreams platform cannot expose token metadata.
