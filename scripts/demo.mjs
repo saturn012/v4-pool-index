@@ -8,6 +8,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 export const DEMO_NETWORK = "base";
 export const DEMO_POOL_ID = "0xfa7714c40e1de3c702b8c8052230072d41f3f36f949bca2a26e9147d678a3c22";
+export const DEFAULT_PAYER_ADDRESS = "0x76eFfFAec43eFaefa64eE71BFEb2963f608fC4A4";
 export const ASSESS_HOST = "127.0.0.1";
 export const ASSESS_PORT = 4021;
 export const BASE_SEPOLIA_RPC = "https://sepolia.base.org";
@@ -26,8 +27,29 @@ function status(name, state, message, extra = {}) {
   return { name, status: state, message, ...extra };
 }
 
-function publicErrorMessage(error, fallback) {
-  return error instanceof Error && error.message ? error.message : fallback;
+export function safeMainErrorMessage(error) {
+  switch (error?.code) {
+    case "CLIENT_INITIALIZATION_FAILED":
+      return "payer client could not be initialized; no request was sent";
+    case "UNKNOWN_PAYMENT_OUTCOME":
+      return "signed payment request outcome is unknown; no retry was attempted";
+    case "KNOWN_PAYMENT_REJECTION":
+      return "payment was rejected; no automatic retry was attempted";
+    case "MISSING_PAYER_KEY":
+      return "X402_PAYER_PRIVATE_KEY is missing";
+    default:
+      return "demo failed; see the preflight and step output";
+  }
+}
+
+export async function createSafePayerClient({ createClient, privateKey }) {
+  try {
+    return await createClient(privateKey);
+  } catch (_) {
+    const error = new Error("payer client could not be initialized; no request was sent");
+    error.code = "CLIENT_INITIALIZATION_FAILED";
+    throw error;
+  }
 }
 
 export function parseMode(argv = []) {
@@ -172,6 +194,21 @@ export async function checkAssessmentServer({ createApp, payTo, host = ASSESS_HO
   }
 }
 
+async function preflightPayerKey({ env, dependencies, adapters }) {
+  if (dependencies.status !== "PASS") {
+    return env.X402_PAYER_PRIVATE_KEY
+      ? status("payer key", "UNKNOWN", "payer key was not checked because npm dependencies are missing", { privateKey: null })
+      : status("payer key", "FAIL", "X402_PAYER_PRIVATE_KEY is missing", { privateKey: null });
+  }
+  return (adapters.deriveAddress ?? derivePayerAddress)({
+    privateKey: env.X402_PAYER_PRIVATE_KEY,
+    createAccount: adapters.createAccount ?? (async (privateKey) => {
+      const { privateKeyToAccount } = await import("viem/accounts");
+      return privateKeyToAccount(privateKey);
+    }),
+  });
+}
+
 export async function runPreflight({ env = process.env, adapters = {} } = {}) {
   const checks = [];
   const dependencies = await (adapters.dependencies ?? checkDependencies)();
@@ -182,16 +219,10 @@ export async function runPreflight({ env = process.env, adapters = {} } = {}) {
   checks.push(token ? status("Graph token", "PASS", "canonical Graph token is available in process memory") : status("Graph token", "FAIL", "canonical Graph token is missing or unsafe"));
   checks.push(await (adapters.tokenApi ?? checkTokenApi)({ token, fetchImpl: adapters.fetchImpl ?? fetch }));
 
-  const keyCheck = await (adapters.deriveAddress ?? derivePayerAddress)({
-    privateKey: env.X402_PAYER_PRIVATE_KEY,
-    createAccount: adapters.createAccount ?? (async (privateKey) => {
-      const { privateKeyToAccount } = await import("viem/accounts");
-      return privateKeyToAccount(privateKey);
-    }),
-  });
+  const keyCheck = await preflightPayerKey({ env, dependencies, adapters });
   checks.push(keyCheck);
   const balances = await (adapters.balances ?? checkBalances)({
-    address: keyCheck.address,
+    address: keyCheck.address ?? DEFAULT_PAYER_ADDRESS,
     asset: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
     amountAtomic: 1000n,
     fetchImpl: adapters.fetchImpl ?? fetch,
@@ -209,7 +240,7 @@ export async function runPreflight({ env = process.env, adapters = {} } = {}) {
     }
   }))();
   checks.push(server);
-  return { ok: checks.every((check) => check.status === "PASS"), checks, token, privateKey: keyCheck.privateKey, payerAddress: keyCheck.address, balances };
+  return { ok: checks.every((check) => check.status === "PASS"), checks, token, privateKey: keyCheck.privateKey, payerAddress: keyCheck.address ?? DEFAULT_PAYER_ADDRESS, balances };
 }
 
 function printCheck(check, write = console.log) {
@@ -332,7 +363,7 @@ async function runFullDemo({ env = process.env, write = console.log } = {}) {
 
   const url = clientModule.buildAssessUrl([poolId, "--network", DEMO_NETWORK]);
   const payerKey = preflight.privateKey;
-  const client = await clientModule.createOfficialClient(payerKey);
+  const client = await createSafePayerClient({ createClient: (key) => clientModule.createOfficialClient(key), privateKey: payerKey });
 
   await withOwnedServer({
     startServer: async () => {
@@ -388,7 +419,7 @@ if (isMainModule()) {
     process.exitCode = await main();
   } catch (error) {
     const code = error?.code === "UNKNOWN_PAYMENT_OUTCOME" ? 3 : 2;
-    process.stderr.write(`${error?.code ?? "DEMO_ERROR"}: ${publicErrorMessage(error, "demo failed")}\n`);
+    process.stderr.write(`${error?.code ?? "DEMO_ERROR"}: ${safeMainErrorMessage(error)}\n`);
     process.exitCode = code;
   }
 }

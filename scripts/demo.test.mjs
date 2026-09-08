@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { checkBalances, checkDependencies, graphEnvironment, runOfflineDemo, runPreflight, withOwnedServer } from "./demo.mjs";
+import { checkBalances, checkDependencies, createSafePayerClient, DEFAULT_PAYER_ADDRESS, graphEnvironment, runOfflineDemo, runPreflight, safeMainErrorMessage, withOwnedServer } from "./demo.mjs";
 
 test("dependency preflight names every missing runtime dependency", async () => {
   const result = await checkDependencies({
@@ -66,4 +66,49 @@ test("Graph/Substreams child environment never receives payer private key", () =
   assert.equal(result.X402_PAYER_PRIVATE_KEY, undefined);
   assert.equal(result.THEGRAPH_TOKEN, "graph-token");
   assert.equal(result.OTHER, "kept");
+});
+
+test("preflight checks known public payer balances without a payer key", async () => {
+  let address;
+  const result = await runPreflight({
+    env: {},
+    adapters: {
+      dependencies: async () => ({ status: "PASS", name: "npm dependencies", message: "ok" }),
+      substreams: () => ({ status: "PASS", name: "substreams CLI", message: "ok" }),
+      loadToken: async () => "token",
+      tokenApi: async () => ({ status: "PASS", name: "Token API", message: "ok" }),
+      deriveAddress: async () => ({ status: "FAIL", name: "payer key", message: "missing", privateKey: null }),
+      balances: async (value) => { address = value.address; return { checks: [{ status: "FAIL", name: "payer USDC balance", message: "0" }] }; },
+      server: async () => ({ status: "PASS", name: "assessment server", message: "ok" }),
+    },
+  });
+  assert.equal(result.ok, false);
+  assert.equal(address, DEFAULT_PAYER_ADDRESS);
+  assert.ok(result.checks.some((item) => item.name === "payer key" && item.status === "FAIL"));
+});
+
+test("missing dependencies do not trigger dynamic payer SDK imports", async () => {
+  const result = await runPreflight({
+    env: { X402_PAYER_PRIVATE_KEY: "synthetic-key" },
+    adapters: {
+      dependencies: async () => ({ status: "FAIL", name: "npm dependencies", message: "missing: viem" }),
+      substreams: () => ({ status: "FAIL", name: "substreams CLI", message: "missing" }),
+      loadToken: async () => null,
+      tokenApi: async () => ({ status: "FAIL", name: "Token API", message: "missing token" }),
+      balances: async () => ({ checks: [{ status: "UNKNOWN", name: "payer balances", message: "unknown" }] }),
+      server: async () => ({ status: "UNKNOWN", name: "assessment server", message: "not attempted" }),
+    },
+  });
+  assert.equal(result.ok, false);
+  assert.equal(result.checks.find((item) => item.name === "payer key").status, "UNKNOWN");
+});
+
+test("payer SDK init and top-level output redact opaque key-like errors", async () => {
+  const marker = "0xPRIVATE_KEY_LIKE_MARKER";
+  await assert.rejects(createSafePayerClient({ privateKey: marker, createClient: async () => { throw new Error(`SDK rejected ${marker}`); } }), (error) => {
+    assert.equal(error.code, "CLIENT_INITIALIZATION_FAILED");
+    assert.equal(error.message.includes(marker), false);
+    return true;
+  });
+  assert.equal(safeMainErrorMessage(new Error(`raw ${marker}`)).includes(marker), false);
 });
