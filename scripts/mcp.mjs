@@ -150,10 +150,6 @@ export function createHandler({ resolver = loadPool } = {}) {
     }
     if (message.method === "notifications/initialized") return null;
     if (message.method === "initialize") {
-      const requested = message.params?.protocolVersion;
-      if (requested && requested !== PROTOCOL_VERSION) {
-        return { jsonrpc: "2.0", id, error: { code: -32602, message: `Unsupported protocol version: ${requested}` } };
-      }
       return { jsonrpc: "2.0", id, result: { protocolVersion: PROTOCOL_VERSION, capabilities: { tools: { listChanged: false } }, serverInfo: { name: "v4-pool-index-mcp", version: "0.1.0" } } };
     }
     if (message.method === "tools/list") return { jsonrpc: "2.0", id, result: { tools: TOOLS } };

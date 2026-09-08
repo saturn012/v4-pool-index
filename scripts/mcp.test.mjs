@@ -24,6 +24,12 @@ test("initialize negotiates the supported MCP protocol", async () => {
   assert.equal(response.result.capabilities.tools.listChanged, false);
 });
 
+test("initialize returns the server version for a client version it does not support", async () => {
+  const response = await request("initialize", { protocolVersion: "2024-11-05" });
+  assert.equal(response.error, undefined);
+  assert.equal(response.result.protocolVersion, PROTOCOL_VERSION);
+});
+
 test("tools/list exposes exactly the two bounded pool tools", async () => {
   const response = await request("tools/list");
   assert.deepEqual(response.result.tools.map((tool) => tool.name), ["resolve_pool", "assess_pool"]);
