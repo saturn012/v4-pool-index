@@ -132,3 +132,6 @@ The files under `docs/ethonline/` are safe public versions of the specification,
 ## AI assistance disclosure
 
 AI tools assisted with the original Graph subgraph, Substreams implementation, ABI/code generation setup, composition layer, tests, documentation, public-artifact drafting, and automated verification runs in this repository. The human project owner supplied requirements, selected the scope and direction, made repository and publication decisions, and authorized the work. The README does not claim manual source or code verification by the owner where no such evidence exists.
+## Local x402 assessment
+
+A local, Base-Sepolia-only paid `GET /assess` wrapper is documented in [`docs/x402.md`](docs/x402.md). It protects only the existing deterministic `assess_pool` output; it has no public listener, server-side private key, trading action, or mainnet route.

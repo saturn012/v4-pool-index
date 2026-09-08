@@ -133,6 +133,19 @@ export async function loadPool({ poolId, network, env = process.env, execute = e
   };
 }
 
+export function assessmentFromResolved(resolved) {
+  return {
+    pool_id: resolved.pool_id,
+    network: resolved.network,
+    verdict: resolved.decision.decision,
+    checks: resolved.decision.checks,
+    reason: resolved.decision.checks.map((check) => `${check.name}: ${check.reason}`),
+    provenance: resolved.provenance,
+    scope: resolved.scope,
+    currencies: resolved.currencies,
+  };
+}
+
 function asToolResult(value, isError = false) {
   return { content: [{ type: "text", text: JSON.stringify(value, null, 2) }], structuredContent: value, ...(isError ? { isError: true } : {}) };
 }
@@ -161,7 +174,7 @@ export function createHandler({ resolver = loadPool } = {}) {
         const resolved = await resolver({ network, poolId });
         const result = name === "resolve_pool"
           ? (({ decision, ...resolution }) => resolution)(resolved)
-          : { pool_id: resolved.pool_id, network: resolved.network, verdict: resolved.decision.decision, checks: resolved.decision.checks, reason: resolved.decision.checks.map((check) => `${check.name}: ${check.reason}`), provenance: resolved.provenance, scope: resolved.scope, currencies: resolved.currencies };
+          : assessmentFromResolved(resolved);
         return { jsonrpc: "2.0", id, result: asToolResult(result) };
       } catch (error) {
         return { jsonrpc: "2.0", id, result: toolError(error) };
