@@ -3,7 +3,7 @@ import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { readProtectedToken } from "./mcp-with-secret.mjs";
+import { readProtectedToken, tokenFromEnvironment } from "./mcp-with-secret.mjs";
 
 test("canonical MCP token bootstrap reads a protected file and rejects loose mode", () => {
   const dir = mkdtempSync(join(tmpdir(), "task52-graph-token-"));
@@ -17,4 +17,8 @@ test("canonical MCP token bootstrap reads a protected file and rejects loose mod
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test("MCP bootstrap preserves a nonempty inherited token without opening the file", () => {
+  assert.equal(tokenFromEnvironment({ THEGRAPH_TOKEN: "preset-token", THEGRAPH_TOKEN_FILE: "/missing/token" }), "preset-token");
 });

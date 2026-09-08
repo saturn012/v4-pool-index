@@ -18,8 +18,12 @@ export function readProtectedToken(file = process.env.THEGRAPH_TOKEN_FILE || CAN
   }
 }
 
+export function tokenFromEnvironment(env = process.env) {
+  return String(env.THEGRAPH_TOKEN || "").trim() || readProtectedToken(env.THEGRAPH_TOKEN_FILE || CANONICAL_TOKEN_FILE);
+}
+
 export async function main() {
-  process.env.THEGRAPH_TOKEN = readProtectedToken();
+  process.env.THEGRAPH_TOKEN = tokenFromEnvironment();
   await serve();
 }
 
