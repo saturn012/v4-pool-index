@@ -12,7 +12,7 @@
 
 **Owner's own words — write here**
 
-- [Describe what was learned about why the `Initialize` index matters in the project.] 
+- [Describe what was learned about why the `Initialize` index matters in the project.]
 - [Add the owner's personal assessment of the implementation and its usefulness.]
 
 ## 2. Dynamic-fee flag
