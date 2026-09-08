@@ -7,6 +7,7 @@ export const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 export const TOKEN_API_URL = "https://api.pinax.network/v1/evm/tokens";
 export const DYNAMIC_FEE_FLAG = 0x800000;
 export const MAX_STATIC_FEE_PPM = 10_000;
+export const TOKEN_METADATA_NETWORKS = new Set(["base"]);
 
 function hex(value) {
   if (value === undefined || value === null) return null;
@@ -131,6 +132,10 @@ export function isNativeCurrency(address) {
   return String(address).toLowerCase() === ZERO_ADDRESS;
 }
 
+export function supportsTokenMetadata(network) {
+  return TOKEN_METADATA_NETWORKS.has(String(network).toLowerCase());
+}
+
 function tokenStatus(metadata) {
   if (!metadata) return { status: "UNKNOWN", reason: "Token API metadata is unavailable" };
   const missing = ["name", "symbol", "decimals"].filter((key) => metadata[key] === null || metadata[key] === undefined);
@@ -205,11 +210,18 @@ export async function fetchTokenMetadata(network, contract, token) {
   return { row, observedAt };
 }
 
-export async function composePools({ pools, network, tokenFile, limit = 10 }) {
-  const token = (await fs.readFile(tokenFile, "utf8")).trim();
-  if (!token) throw new Error("token file is empty");
+export async function composePools({ pools, network, tokenFile, token: suppliedToken, limit = 10 }) {
   const selected = pools.slice(0, limit);
-  const addresses = [...new Set(selected.flatMap((pool) => [pool.currency0, pool.currency1]).filter((address) => !isNativeCurrency(address)))];
+  const metadataSupported = supportsTokenMetadata(network);
+  let token = null;
+  if (metadataSupported) {
+    token = suppliedToken ?? (tokenFile ? await fs.readFile(tokenFile, "utf8") : "");
+    token = String(token).trim();
+    if (!token) throw new Error("Token API token is required for Base metadata");
+  }
+  const addresses = metadataSupported
+    ? [...new Set(selected.flatMap((pool) => [pool.currency0, pool.currency1]).filter((address) => !isNativeCurrency(address)))]
+    : [];
   const metadata = new Map();
   const errors = new Map();
   for (const address of addresses) {
@@ -226,12 +238,22 @@ export async function composePools({ pools, network, tokenFile, limit = 10 }) {
       const address = pool[fieldName];
       currencies[fieldName] = isNativeCurrency(address)
         ? { address, kind: "native", metadata: null, status: "PASS", reason: "native currency; Token API not called" }
-        : { address, kind: "erc20", metadata: metadata.get(address.toLowerCase()) ?? null, status: metadata.has(address.toLowerCase()) ? "PASS" : "UNKNOWN", reason: metadata.has(address.toLowerCase()) ? "metadata received" : (errors.get(address.toLowerCase()) ?? "metadata not returned") };
+        : !metadataSupported
+          ? { address, kind: "erc20", metadata: null, status: "UNKNOWN", reason: `Token API metadata endpoint is not supported for ${network}` }
+          : { address, kind: "erc20", metadata: metadata.get(address.toLowerCase()) ?? null, status: metadata.has(address.toLowerCase()) ? "PASS" : "UNKNOWN", reason: metadata.has(address.toLowerCase()) ? "metadata received" : (errors.get(address.toLowerCase()) ?? "metadata not returned") };
     }
     const relevant = new Map([...metadata].filter(([address]) => [pool.currency0, pool.currency1].map((item) => item.toLowerCase()).includes(address)));
     return { ...pool, network, provenance: { source: "Substreams map_initialize", network, observed_at: new Date().toISOString() }, currencies, decision: evaluatePool(pool, relevant) };
   });
-  return { network, source: { substreams_module: "map_initialize", token_api: TOKEN_API_URL }, pools: results };
+  return {
+    network,
+    source: {
+      substreams_module: "map_initialize",
+      token_api: TOKEN_API_URL,
+      metadata_coverage: metadataSupported ? "queried" : `UNKNOWN: Token API metadata endpoint is not supported for ${network}`,
+    },
+    pools: results,
+  };
 }
 
 function usage() {

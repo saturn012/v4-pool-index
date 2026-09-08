@@ -5,7 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
-import { ZERO_ADDRESS, evaluatePool, parseStreamText } from "./compose.mjs";
+import { ZERO_ADDRESS, composePools, evaluatePool, parseStreamText } from "./compose.mjs";
 
 const ERC20 = (address, overrides = {}) => ({ contract: address, name: "Example Token", symbol: "EXT", decimals: 18, holders: 42, circulating_supply: 1000000, ...overrides });
 const pool = (overrides = {}) => ({ pool_id: `0x${"11".repeat(32)}`, currency0: `0x${"22".repeat(20)}`, currency1: `0x${"33".repeat(20)}`, fee: 500, tick_spacing: 10, hooks: ZERO_ADDRESS, ...overrides });
@@ -82,4 +82,12 @@ test("CLI accepts a valid empty JSONL record without network access", () => {
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
+});
+
+
+test("Robinhood returns honest unsupported Token API coverage without a metadata request", async () => {
+  const result = await composePools({ pools: [pool()], network: "robinhood", limit: 1 });
+  assert.match(result.source.metadata_coverage, /UNKNOWN/);
+  assert.equal(result.pools[0].currencies.currency0.status, "UNKNOWN");
+  assert.match(result.pools[0].currencies.currency0.reason, /not supported/);
 });

@@ -8,7 +8,8 @@
     "codegen": "graph codegen",
     "build": "graph build",
     "test": "graph test",
-    "test:composition": "node --test scripts/compose.test.mjs"
+    "test:composition": "node --test scripts/compose.test.mjs",
+    "test:mcp": "node --test scripts/mcp.test.mjs"
   },
   "devDependencies": {
     "@graphprotocol/graph-cli": "0.98.1",
