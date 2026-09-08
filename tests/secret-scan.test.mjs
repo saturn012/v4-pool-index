@@ -110,3 +110,22 @@ test("scanner detects direct key text embedded in a binary blob", () => {
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+test("scanner blocks recognizable API tokens, JWTs, and keyed RPC URLs", () => {
+  const root = fixture();
+  try {
+    const apiToken = `sk_${"a".repeat(24)}`;
+    const jwt = [`eyJ${"a".repeat(12)}`, "b".repeat(12), "c".repeat(12)].join(".");
+    const rpcKey = "a".repeat(32);
+    writeFileSync(join(root, "credentials.txt"), `API_TOKEN=${apiToken}\nJWT=${jwt}\nRPC=https://mainnet.infura.io/v3/${rpcKey}\n`);
+    assert.equal(run(root, ["git", "add", "credentials.txt"]).status, 0);
+    const result = run(root, ["node", "tools/secret-scan.mjs", "--staged"]);
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /named-api-token/);
+    assert.match(result.stderr, /jwt/);
+    assert.match(result.stderr, /keyed-rpc-url/);
+    assert.doesNotMatch(`${result.stdout}${result.stderr}`, new RegExp(apiToken));
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});

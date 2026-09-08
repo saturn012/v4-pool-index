@@ -90,7 +90,7 @@ function scanText(content) {
   const text = content.toString("utf8");
   const rules = new Set();
   const namedHex = /\b[A-Za-z_][A-Za-z0-9_]*(?:key|secret|private|mnemonic|seed|token)[A-Za-z0-9_]*\b\s*(?:=|:)\s*["'`]?\s*(?:0x)?[0-9a-fA-F]{64}\b/i;
-  const namedToken = /\b[A-Za-z_][A-Za-z0-9_]*(?:api[_-]?key|token|secret)[A-Za-z0-9_]*\b\s*(?:=|:)\s*["'`]?\s*[A-Za-z0-9_.-]{20,}\b/i;
+  const namedToken = /\b[A-Za-z_][A-Za-z0-9_]*(?:api[_-]?key|token|secret)[A-Za-z0-9_]*\b\s*(?:=|:)\s*["'`]?\s*(?:(?:sk|ghp|github_pat|xoxb|xoxa|xoxp|AIza|AKIA|ya29|npm)_[A-Za-z0-9_.-]{16,}|Bearer\s+[A-Za-z0-9_.-]{20,})\b/i;
   const jwt = /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b/;
   const keyedRpc = /https?:\/\/[^\s"'`]+\.(?:infura\.io|alchemy\.com)\/(?:v[23])\/[A-Za-z0-9_-]{16,}\b/i;
   if (namedHex.test(text)) rules.add("named-64-hex");
