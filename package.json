@@ -15,7 +15,8 @@
     "install-secrets-hook": "node scripts/install-secrets-hook.mjs",
     "test:secrets": "node --test tests/secret-scan.test.mjs",
     "test:x402": "node --test scripts/assess-http.test.mjs",
-    "start:x402": "node scripts/assess-http.mjs"
+    "start:x402": "node scripts/assess-http.mjs",
+    "test:secret-bootstrap": "node --test scripts/mcp-with-secret.test.mjs"
   },
   "devDependencies": {
     "@graphprotocol/graph-cli": "0.98.1",

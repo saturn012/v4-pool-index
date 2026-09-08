@@ -24,9 +24,9 @@ Use a client that supports newline-delimited stdio MCP JSON-RPC, such as Claude 
   "mcpServers": {
     "v4-pool-index": {
       "command": "node",
-      "args": ["/path/to/v4-pool-index/scripts/mcp.mjs"],
+      "args": ["/path/to/v4-pool-index/scripts/mcp-with-secret.mjs"],
       "env": {
-        "THEGRAPH_TOKEN": "set-this-in-the-client-secret-store",
+        "THEGRAPH_TOKEN_FILE": "/home/hermes/.hermes/secrets/thegraph.token",
         "SUBSTREAMS_ENDPOINT_BASE": "base.substreams.pinax.network:443",
         "SUBSTREAMS_ENDPOINT_ROBINHOOD": "robinhood.substreams.pinax.network:443",
         "MCP_BASE_START_BLOCK": "50994246",
@@ -38,7 +38,7 @@ Use a client that supports newline-delimited stdio MCP JSON-RPC, such as Claude 
 }
 ```
 
-`THEGRAPH_TOKEN` is read only from the MCP process environment. The server passes it in-process to the existing Substreams CLI as `SUBSTREAMS_API_TOKEN`, and passes it to the existing Base Token API client as an HTTP bearer header. It is never accepted as a tool argument, emitted in an MCP response, or written to repository files. The client should supply it from its own secret store or a supervised launcher that reads a protected file into the environment.
+`mcp-with-secret.mjs` reads `THEGRAPH_TOKEN_FILE` (default: the canonical path shown above) into `THEGRAPH_TOKEN` only in the MCP process environment. The value is never accepted as an argument, emitted in an MCP response, or written to repository files. It is passed in-process to the existing Substreams CLI as `SUBSTREAMS_API_TOKEN` and to the Base Token API bearer header. The legacy `thegraph_token.txt` is not changed by this launcher: root must map every actual external consumer before any migration or deletion.
 
 The checked-in defaults use the already verified one-block evidence windows shown above. An owner can update the three bounded range variables for another reviewable window; the span is capped at 100 blocks. A requested `pool_id` outside that window returns `POOL_NOT_FOUND`, rather than silently searching an unbounded history.
 
