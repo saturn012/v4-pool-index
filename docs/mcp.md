@@ -14,6 +14,8 @@ Use a client that supports newline-delimited stdio MCP JSON-RPC, such as Claude 
       "args": ["/path/to/v4-pool-index/scripts/mcp.mjs"],
       "env": {
         "THEGRAPH_TOKEN": "set-this-in-the-client-secret-store",
+        "SUBSTREAMS_ENDPOINT_BASE": "base.substreams.pinax.network:443",
+        "SUBSTREAMS_ENDPOINT_ROBINHOOD": "robinhood.substreams.pinax.network:443",
         "MCP_BASE_START_BLOCK": "50994246",
         "MCP_ROBINHOOD_START_BLOCK": "56764780",
         "MCP_BLOCK_SPAN": "1"
@@ -26,6 +28,8 @@ Use a client that supports newline-delimited stdio MCP JSON-RPC, such as Claude 
 `THEGRAPH_TOKEN` is read only from the MCP process environment. The server passes it in-process to the existing Substreams CLI as `SUBSTREAMS_API_TOKEN`, and passes it to the existing Base Token API client as an HTTP bearer header. It is never accepted as a tool argument, emitted in an MCP response, or written to repository files. The client should supply it from its own secret store or a supervised launcher that reads a protected file into the environment.
 
 The checked-in defaults use the already verified one-block evidence windows shown above. An owner can update the three bounded range variables for another reviewable window; the span is capped at 100 blocks. A requested `pool_id` outside that window returns `POOL_NOT_FOUND`, rather than silently searching an unbounded history.
+
+For reproducible provider routing, set `SUBSTREAMS_ENDPOINT_BASE=base.substreams.pinax.network:443` and `SUBSTREAMS_ENDPOINT_ROBINHOOD=robinhood.substreams.pinax.network:443` in the same MCP process environment. The existing `substreams` CLI selects the matching variable for the tool's `network`; the MCP forwards it unchanged. Base token metadata uses the existing `https://api.pinax.network/v1/evm/tokens` endpoint. These are the only three external read-only destinations in a live tool call; no endpoint is contacted until a tool is called.
 
 ## Tools
 
