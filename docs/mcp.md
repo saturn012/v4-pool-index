@@ -66,12 +66,23 @@ npm run test:composition
 
 For a supervised live invocation, set `THEGRAPH_TOKEN` in the process environment and send `initialize`, `tools/list`, and a tool call over stdio. Keep client logs and error reports free of the environment value.
 
-## Retained registry token
+## Registry publication with the canonical token
 
-`scripts/registry-publish-with-secret.mjs` loads only the canonical protected
-`~/.hermes/secrets/substreams-registry.token` into `SUBSTREAMS_REGISTRY_TOKEN`
-and invokes the fixed `substreams registry publish` command. It rejects inherited
-registry endpoint/debug controls, fixes `RUST_LOG=warn`, accepts no arguments,
-and never forwards child stderr. Root performs the real retained-consumer publish
-separately; do not delete `~/.config/substreams/registry-token` until that real
-operation succeeds.
+The launcher reads `~/.hermes/secrets/substreams-registry.token` (owner-only file)
+into `SUBSTREAMS_REGISTRY_TOKEN` and invokes `/usr/local/bin/substreams registry
+publish <absolute-package.spkg> --yes`. Pass exactly one existing local `.spkg`:
+
+```sh
+node scripts/registry-publish-with-secret.mjs /absolute/package.spkg
+```
+
+The child receives only PATH, HOME, LANG and the registry token. Inherited debug
+settings and endpoint overrides are omitted. Raw stderr is suppressed; success
+requires exit code zero and the CLI publication success marker.
+
+On 8 September 2026, Substreams 1.22.0 successfully published
+`v4-pool-index-consumer@v0.1.0` with the old registry-token file absent from the
+process's private mount namespace. The old file was removed only after this real
+operation succeeded. Keep the canonical token file; future publication uses the
+command above. For every secret migration, loader tests alone do not authorize
+removal of the old consumer path.
