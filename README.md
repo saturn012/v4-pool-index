@@ -17,6 +17,10 @@ The links below are pinned to source commit `e647f3fa6acf5adc8d3ae40be5be2cad1ce
 - [`substreams/proto/pool/v1/pool.proto#L5-L16`](https://github.com/saturn012/v4-pool-index/blob/e647f3fa6acf5adc8d3ae40be5be2cad1ce4bd95/substreams/proto/pool/v1/pool.proto#L5-L16) defines the protobuf output shape: `pool_id`, both currencies, raw `fee`, `tick_spacing`, and `hooks`.
 - [`scripts/compose.mjs#L208-L235`](https://github.com/saturn012/v4-pool-index/blob/e647f3fa6acf5adc8d3ae40be5be2cad1ce4bd95/scripts/compose.mjs#L208-L235) enriches the Substreams records with token metadata and provenance; [`scripts/compose.mjs#L155-L186`](https://github.com/saturn012/v4-pool-index/blob/e647f3fa6acf5adc8d3ae40be5be2cad1ce4bd95/scripts/compose.mjs#L155-L186) contains the deterministic hook, fee, tick-spacing, metadata, and final `PASS`/`REJECT`/`UNKNOWN` decision rules.
 
+## Local MCP
+
+For a local stdio MCP client configuration, the two available pool tools, required environment variables, bounded lookup windows, and evidence limits, see [docs/mcp.md](docs/mcp.md). The MCP exposes `resolve_pool` and `assess_pool`; it does not open a public port or make trading decisions.
+
 ## What became easier through composition
 
 In v4, `pool_id` is a hash of the `PoolKey`; the identity stream can tell us which currencies and pool parameters were initialized, but it does not supply token names or holder counts. Pinax Token API supplies standardized token meaning, but it does not know which v4 pool produced the pair. Feeding the first product's output into the second makes one reproducible record that a rules engine can explain. This is a composition of two Graph products, not a claim that the entire Substreams platform cannot expose token metadata.
