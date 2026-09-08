@@ -145,6 +145,59 @@ test("scanner blocks recognizable API tokens, JWTs, and keyed RPC URLs", () => {
   }
 });
 
+test("scanner blocks standard token prefixes and quoted API keys without entropy fallback", () => {
+  const root = fixture();
+  try {
+    const values = [
+      `sk-${"a".repeat(24)}`,
+      `xoxb-${"a".repeat(24)}`,
+      `AKIA${"A".repeat(16)}`,
+      `AIza${"a".repeat(24)}`,
+      `ya29.${"a".repeat(24)}`,
+      `ghp_${"a".repeat(24)}`,
+    ];
+    for (const [index, value] of values.entries()) {
+      const file = `token-${index}.json`;
+      writeFileSync(join(root, file), `{"API_KEY":"${value}"}\n`);
+      assert.equal(run(root, ["git", "add", file]).status, 0);
+      const result = run(root, ["node", "tools/secret-scan.mjs", "--staged"]);
+      assert.equal(result.status, 1, `prefix ${index} must block`);
+      assert.match(result.stderr, /named-api-token/);
+      assert.doesNotMatch(`${result.stdout}${result.stderr}`, new RegExp(value));
+      assert.equal(run(root, ["git", "rm", "--cached", "--quiet", file]).status, 0);
+    }
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("primary installer refuses shared hooks and isolates only its worktree after opt-in", () => {
+  const root = fixture();
+  const linked = `${root}-linked`;
+  try {
+    assert.equal(run(root, ["git", "add", "tools", "config", "scripts"]).status, 0);
+    assert.equal(run(root, ["git", "commit", "-m", "fixture hook base"]).status, 0);
+    assert.equal(run(root, ["git", "worktree", "add", "-q", "-b", "linked-hook-fixture", linked]).status, 0);
+    let result = run(root, ["node", "scripts/install-secrets-hook.mjs"]);
+    assert.equal(result.status, 2);
+    assert.match(result.stderr, /linked worktrees share hooks/);
+    assert.equal(run(root, ["git", "config", "extensions.worktreeConfig", "true"]).status, 0);
+    result = run(root, ["node", "scripts/install-secrets-hook.mjs"]);
+    assert.equal(result.status, 0);
+    const localHookDir = run(root, ["git", "config", "--worktree", "--get", "core.hooksPath"]).stdout.trim();
+    assert.ok(localHookDir.endsWith("task52-hooks"));
+    writeFileSync(join(root, "candidate.env"), `PRIVATE_KEY=${fakeKey}\n`);
+    assert.equal(run(root, ["git", "add", "candidate.env"]).status, 0);
+    assert.notEqual(run(root, ["git", "commit", "-m", "primary red fixture"]).status, 0);
+    writeFileSync(join(linked, "ordinary.txt"), "ordinary content\n");
+    assert.equal(run(linked, ["git", "add", "ordinary.txt"]).status, 0);
+    assert.equal(run(linked, ["git", "commit", "-m", "linked green fixture"]).status, 0);
+  } finally {
+    run(root, ["git", "worktree", "remove", "--force", linked]);
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test("history mode scans deleted blobs and historical forbidden paths", () => {
   const root = fixture();
   try {

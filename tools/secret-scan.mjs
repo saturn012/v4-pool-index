@@ -91,7 +91,7 @@ function scanText(content) {
   const rules = new Set();
   const assignments = [...text.matchAll(/(?:^|[,{\s\0])["']?([A-Za-z_][A-Za-z0-9_]*)["']?\s*(?:=|:)\s*["'`]?(Bearer[ \t]+[A-Za-z0-9_.-]+|[^\s,}\0"'`]+)/gim)];
   const sensitiveName = /(?:key|secret|private|mnemonic|seed|token)/i;
-  const apiTokenValue = /^(?:(?:sk|ghp|github_pat|xoxb|xoxa|xoxp|AIza|AKIA|ya29|npm)_[A-Za-z0-9_.-]{16,}|Bearer\s+[A-Za-z0-9_.-]{20,})$/i;
+  const apiTokenValue = /^(?:(?:sk|ghp|github_pat|npm)[_-][A-Za-z0-9_.-]{16,}|xox[abp][_-][A-Za-z0-9_.-]{16,}|AKIA[A-Z0-9]{16}|AIza[A-Za-z0-9_-]{16,}|ya29\.[A-Za-z0-9_.-]{16,}|Bearer\s+[A-Za-z0-9_.-]{20,})$/i;
   const jwt = /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b/;
   const keyedRpc = /https?:\/\/[^\s"'`]+\.(?:infura\.io|alchemy\.com)\/(?:v[23])\/[A-Za-z0-9_-]{16,}\b/i;
   for (const [, name, value] of assignments) {
