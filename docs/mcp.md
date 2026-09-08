@@ -65,3 +65,13 @@ npm run test:composition
 ```
 
 For a supervised live invocation, set `THEGRAPH_TOKEN` in the process environment and send `initialize`, `tools/list`, and a tool call over stdio. Keep client logs and error reports free of the environment value.
+
+## Retained registry token
+
+`scripts/registry-publish-with-secret.mjs` loads only the canonical protected
+`~/.hermes/secrets/substreams-registry.token` into `SUBSTREAMS_REGISTRY_TOKEN`
+and invokes the fixed `substreams registry publish` command. It rejects inherited
+registry endpoint/debug controls, fixes `RUST_LOG=warn`, accepts no arguments,
+and never forwards child stderr. Root performs the real retained-consumer publish
+separately; do not delete `~/.config/substreams/registry-token` until that real
+operation succeeds.
