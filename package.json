@@ -9,7 +9,11 @@
     "build": "graph build",
     "test": "graph test",
     "test:composition": "node --test scripts/compose.test.mjs",
-    "test:mcp": "node --test scripts/mcp.test.mjs"
+    "test:mcp": "node --test scripts/mcp.test.mjs",
+    "scan:secrets": "node tools/secret-scan.mjs --all",
+    "scan:secrets:history": "node tools/secret-scan.mjs --history",
+    "install-secrets-hook": "node scripts/install-secrets-hook.mjs",
+    "test:secrets": "node --test tests/secret-scan.test.mjs"
   },
   "devDependencies": {
     "@graphprotocol/graph-cli": "0.98.1",

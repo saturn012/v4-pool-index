@@ -89,6 +89,42 @@ npm test
 
 The Matchstick runner requires the host runtime library `libpq.so.5`.
 
+## Secret barrier
+
+Private keys, mnemonics, API tokens, JWTs, and paid RPC URLs containing a path
+key must never enter Git. Contract addresses, pool IDs, transaction hashes, and
+the public x402 payment recipient are not secrets; the scanner does not reject a
+plain 64-hex public identifier by length alone.
+
+Install the clone-local pre-commit hook with one command:
+
+```sh
+npm run install-secrets-hook
+```
+
+Manually scan the current Git index:
+
+```sh
+npm run scan:secrets
+```
+
+The hook reads staged blobs from the Git index rather than the working tree. It
+also rejects `.env` (including variants) and paths inside `secrets/`,
+case-insensitively. `npm run scan:secrets:history` scans all refs, commit
+messages, and reachable blobs; pass `-- --report /safe/path/report.json` for a
+sanitized JSON report.
+
+This task-52 local detector is not a replacement for review, CI, or access
+control. It intentionally does not unpack binary/archive files, decode
+base64/encrypted values, reconstruct values split across lines, or recognize all
+proprietary token formats. `git commit --no-verify` bypasses any Git hook, so CI
+and manual checks must run the same scanner independently.
+
+The mnemonic dictionary is the full English BIP-39 wordlist from
+[bitcoin/bips](https://github.com/bitcoin/bips/blob/master/bip-0039/english.txt),
+vendored in `config/bip39-english.txt`. The scanner checks 12- and 24-word
+dictionary sequences but does not validate their checksum.
+
 ## ETHOnline public artifacts
 
 The files under `docs/ethonline/` are safe public versions of the specification, implementation prompt, plan, and demo script. Private coordination paths, server addresses, credentials, internal reports, and non-public fixture identities are intentionally omitted. This repository does not claim partner-prize acceptance; live evidence, continuity history, publication, and the owner-recorded demo remain separate gates.
