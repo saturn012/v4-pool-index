@@ -133,6 +133,7 @@ function historyFindings() {
   const objects = git(["rev-list", "--objects", "--all"]).toString("utf8").split("\n").filter(Boolean);
   const findings = [];
   const seenBlobs = new Set();
+  const seenForbiddenPaths = new Set();
 
   for (const commit of commits) {
     const message = git(["log", "-1", "--format=%B", commit]);
@@ -143,10 +144,14 @@ function historyFindings() {
     const firstSpace = row.indexOf(" ");
     const object = firstSpace === -1 ? row : row.slice(0, firstSpace);
     const file = firstSpace === -1 ? "<unmapped>" : row.slice(firstSpace + 1);
-    if (!/^[0-9a-f]{40,64}$/.test(object) || seenBlobs.has(object)) continue;
+    if (!/^[0-9a-f]{40,64}$/.test(object)) continue;
+    if (forbiddenPath(file) && !seenForbiddenPaths.has(file)) {
+      findings.push(safeFinding("forbidden-path", file));
+      seenForbiddenPaths.add(file);
+    }
+    if (seenBlobs.has(object)) continue;
     if (git(["cat-file", "-t", object]).toString("utf8").trim() !== "blob") continue;
     seenBlobs.add(object);
-    if (forbiddenPath(file)) findings.push(safeFinding("forbidden-path", file));
     if (excludedPath(file)) continue;
     const types = scanText(git(["cat-file", "blob", object]));
     if (types.length === 0) continue;

@@ -129,3 +129,26 @@ test("scanner blocks recognizable API tokens, JWTs, and keyed RPC URLs", () => {
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+test("history mode scans deleted blobs and historical forbidden paths", () => {
+  const root = fixture();
+  try {
+    writeFileSync(join(root, "history.txt"), `PRIVATE_KEY=${fakeKey}\n`);
+    assert.equal(run(root, ["git", "add", "history.txt"]).status, 0);
+    assert.equal(run(root, ["git", "commit", "-m", "secret fixture"]).status, 0);
+    assert.equal(run(root, ["git", "rm", "history.txt"]).status, 0);
+    assert.equal(run(root, ["git", "commit", "-m", "delete fixture"]).status, 0);
+    writeFileSync(join(root, "plain.txt"), "ordinary content\n");
+    assert.equal(run(root, ["git", "add", "plain.txt"]).status, 0);
+    assert.equal(run(root, ["git", "commit", "-m", "path fixture"]).status, 0);
+    assert.equal(run(root, ["git", "mv", "plain.txt", ".env"]).status, 0);
+    assert.equal(run(root, ["git", "commit", "-m", "rename fixture"]).status, 0);
+    const result = run(root, ["node", "tools/secret-scan.mjs", "--history"]);
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /named-64-hex/);
+    assert.match(result.stderr, /forbidden-path/);
+    assert.doesNotMatch(`${result.stdout}${result.stderr}`, new RegExp(fakeKey));
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
