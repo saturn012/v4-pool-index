@@ -46,7 +46,7 @@ test("hook allows a public pool id and rejects complete 12 and 24 word phrases",
   const root = fixture();
   try {
     assert.equal(run(root, ["node", "scripts/install-secrets-hook.mjs"]).status, 0);
-    writeFileSync(join(root, "pool.js"), `const poolId = "0x${"11".repeat(32)}";\n`);
+    writeFileSync(join(root, "pool.js"), `const poolId = "0x${"11".repeat(32)}";\nconst txHash = "0x${"22".repeat(32)}";\nconst publicAddress = "0x${"33".repeat(20)}";\n`);
     assert.equal(run(root, ["git", "add", "pool.js"]).status, 0);
     assert.equal(run(root, ["git", "commit", "-m", "green public id"]).status, 0);
     const phrase12 = Array(11).fill("abandon").concat("about").join(" ");
@@ -56,6 +56,21 @@ test("hook allows a public pool id and rejects complete 12 and 24 word phrases",
     const result = run(root, ["node", "tools/secret-scan.mjs", "--staged"]);
     assert.equal(result.status, 1);
     assert.match(result.stderr, /bip39-mnemonic/);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("scanner blocks bare sensitive names and quoted JSON/YAML keys", () => {
+  const root = fixture();
+  try {
+    const hex = `0x${"dead".repeat(16)}`;
+    writeFileSync(join(root, "assignments.txt"), `key = "${hex}"\nsecret: "${hex}"\nprivate = "${hex}"\nseed: "${hex}"\n{"PRIVATE_KEY":"${hex}"}\n"mnemonic": "${hex}"\n`);
+    assert.equal(run(root, ["git", "add", "assignments.txt"]).status, 0);
+    const result = run(root, ["node", "tools/secret-scan.mjs", "--staged"]);
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /named-64-hex/);
+    assert.doesNotMatch(`${result.stdout}${result.stderr}`, new RegExp(hex));
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

@@ -89,12 +89,15 @@ function scanText(content) {
   // still matches, while archives/encryption/encoded payloads remain limitations.
   const text = content.toString("utf8");
   const rules = new Set();
-  const namedHex = /\b[A-Za-z_][A-Za-z0-9_]*(?:key|secret|private|mnemonic|seed|token)[A-Za-z0-9_]*\b\s*(?:=|:)\s*["'`]?\s*(?:0x)?[0-9a-fA-F]{64}\b/i;
-  const namedToken = /\b[A-Za-z_][A-Za-z0-9_]*(?:api[_-]?key|token|secret)[A-Za-z0-9_]*\b\s*(?:=|:)\s*["'`]?\s*(?:(?:sk|ghp|github_pat|xoxb|xoxa|xoxp|AIza|AKIA|ya29|npm)_[A-Za-z0-9_.-]{16,}|Bearer\s+[A-Za-z0-9_.-]{20,})\b/i;
+  const assignments = [...text.matchAll(/(?:^|[,{\s\0])["']?([A-Za-z_][A-Za-z0-9_]*)["']?\s*(?:=|:)\s*["'`]?(Bearer[ \t]+[A-Za-z0-9_.-]+|[^\s,}\0"'`]+)/gim)];
+  const sensitiveName = /(?:key|secret|private|mnemonic|seed|token)/i;
+  const apiTokenValue = /^(?:(?:sk|ghp|github_pat|xoxb|xoxa|xoxp|AIza|AKIA|ya29|npm)_[A-Za-z0-9_.-]{16,}|Bearer\s+[A-Za-z0-9_.-]{20,})$/i;
   const jwt = /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b/;
   const keyedRpc = /https?:\/\/[^\s"'`]+\.(?:infura\.io|alchemy\.com)\/(?:v[23])\/[A-Za-z0-9_-]{16,}\b/i;
-  if (namedHex.test(text)) rules.add("named-64-hex");
-  if (namedToken.test(text)) rules.add("named-api-token");
+  for (const [, name, value] of assignments) {
+    if (sensitiveName.test(name) && /^(?:0x)?[0-9a-f]{64}$/i.test(value)) rules.add("named-64-hex");
+    if (/(?:api[_-]?key|token|secret)/i.test(name) && apiTokenValue.test(value)) rules.add("named-api-token");
+  }
   if (jwt.test(text)) rules.add("jwt");
   if (keyedRpc.test(text)) rules.add("keyed-rpc-url");
   if (scanMnemonicLines(text)) rules.add("bip39-mnemonic");
