@@ -135,3 +135,27 @@ AI tools assisted with the original Graph subgraph, Substreams implementation, A
 ## Local x402 assessment
 
 A local, Base-Sepolia-only paid `GET /assess` wrapper and the owner-run `npm run pay:assess -- <pool_id> --network base` client are documented in [`docs/x402.md`](docs/x402.md). The payer accepts only the configured Base Sepolia USDC requirement and emits no automatic retry after a signed request. This remains a loopback-only, testnet procedure: it has no public listener, server-side private key, trading action, or mainnet route.
+
+## Reproducible demo
+
+The video/demo path is one command from data to paid assessment:
+
+```sh
+npm run demo
+```
+
+Before the run it aggregates all missing prerequisites: npm runtime dependencies, the `substreams` CLI, the canonical `THEGRAPH_TOKEN`, Pinax Token API availability, the payer key, Base Sepolia ETH/USDC balances, and the loopback assessment server. The check-only command performs the same preflight, never signs, pays, starts a persistent server, or runs the assessment:
+
+```sh
+npm run demo:check
+```
+
+The default demo uses the Base pool from the reproducible example above. The first three steps show `map_initialize`, Token API metadata, and the existing `assess_pool`-shaped verdict with sources, reasons, and limits. Steps 4–6 show the machine-readable HTTP 402, the existing x402 payer's single signed retry, and the settled result. Each invocation costs `1000` atomic USDC units (`0.001 USDC`) on Base Sepolia; the preflight reports a two-run plan of `2000` units so a second recorded run can be made deliberately. Only the dedicated payer `X402_PAYER_PRIVATE_KEY` and the dedicated receiver from `config/assess-x402.mjs` are in scope; the trading wallet is not used.
+
+If the network or provider is unavailable, the first three steps can be rehearsed without any external I/O or secret access:
+
+```sh
+npm run demo -- --offline
+```
+
+Offline output is explicitly marked as recorded fixtures, and steps 4–6 are not run. The paid path is Base Sepolia only; test USDC is available from the [Circle faucet](https://faucet.circle.com/) and gas ETH from the [Alchemy Base Sepolia faucet](https://www.alchemy.com/faucets/base-sepolia). The balance checks use Base's public [Base Sepolia RPC](https://docs.base.org/base-chain/api-reference/rpc-overview) and never treat an unknown response as zero.

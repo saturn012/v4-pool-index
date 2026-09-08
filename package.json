@@ -19,7 +19,10 @@
     "test:secret-bootstrap": "node --test scripts/mcp-with-secret.test.mjs",
     "test:registry-launcher": "node --test scripts/registry-publish-with-secret.test.mjs",
     "pay:assess": "node scripts/assess-client.mjs",
-    "test:assess-client": "node --test scripts/assess-client.test.mjs"
+    "test:assess-client": "node --test scripts/assess-client.test.mjs",
+    "demo": "node scripts/demo.mjs",
+    "demo:check": "node scripts/demo.mjs --check",
+    "test:demo": "node --test scripts/demo.test.mjs"
   },
   "devDependencies": {
     "@graphprotocol/graph-cli": "0.98.1",
