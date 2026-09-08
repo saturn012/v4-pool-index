@@ -2,6 +2,19 @@
 
 `v4-pool-index-mcp` is a local stdio MCP server for the repository's existing `map_initialize` Substreams module and the deterministic metadata decision layer. It exposes no HTTP listener, makes no wallet or transaction calls, and does not invoke the Pinax MCP server.
 
+## Prerequisite: local Substreams WASM
+
+The stdio server invokes the repository’s local `map_initialize` package, so build its WASM artifact before starting the MCP process:
+
+```sh
+cd substreams
+cargo build --locked --release --target wasm32-unknown-unknown
+cd ..
+node scripts/mcp.mjs
+```
+
+Install the Rust `wasm32-unknown-unknown` target and make the `substreams` CLI available on `PATH`. If the Rust dependencies are already cached, `cargo build --offline --locked --release --target wasm32-unknown-unknown` is an equivalent offline build. The expected artifact is `substreams/target/wasm32-unknown-unknown/release/substreams.wasm`; no network provider call is made by this build step.
+
 ## Client connection
 
 Use a client that supports newline-delimited stdio MCP JSON-RPC, such as Claude Desktop. From a checkout that has its Node dependencies and the `substreams` CLI available, add a server entry like this (replace the placeholders; do not commit a token):
