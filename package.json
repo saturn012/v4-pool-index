@@ -14,7 +14,8 @@
     "scan:secrets:history": "node tools/secret-scan.mjs --history",
     "install-secrets-hook": "node scripts/install-secrets-hook.mjs",
     "test:secrets": "node --test tests/secret-scan.test.mjs",
-    "test:secret-bootstrap": "node --test scripts/mcp-with-secret.test.mjs"
+    "test:secret-bootstrap": "node --test scripts/mcp-with-secret.test.mjs",
+    "test:registry-launcher": "node --test scripts/registry-publish-with-secret.test.mjs"
   },
   "devDependencies": {
     "@graphprotocol/graph-cli": "0.98.1",
