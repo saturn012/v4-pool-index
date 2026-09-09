@@ -1,6 +1,6 @@
 # v4-pool-index consumer
 
-This package is the downstream half of the composition proof. It imports the published `v4-pool-index@v0.1.1` package by registry name and consumes its `pools:map_initialize` output; it does not copy or re-run the producer implementation.
+This package is the downstream half of the composition proof. It imports the published `v4-pool-index@v0.1.2` package by registry name and consumes its `pools:map_initialize` output; it does not copy or re-run the producer implementation.
 
 `map_pool_digest` emits one `consumer.v1.PoolDigests` record per block with:
 
@@ -19,7 +19,7 @@ substreams run consumer/substreams.yaml map_pool_digest --network robinhood --st
 substreams run consumer/substreams.yaml map_pool_digest --network base --start-block <BLOCK> --stop-block <BLOCK+1> --output jsonl
 ```
 
-The package imports `v4-pool-index@v0.1.1` by name; no producer source or producer package is copied into `consumer/`. The package was subsequently published as `v4-pool-index-consumer@v0.1.0` during the registry token migration acceptance on 8 September 2026.
+The package imports `v4-pool-index@v0.1.2` by name; no producer source or producer package is copied into `consumer/`. The package was subsequently published as `v4-pool-index-consumer@v0.1.1` during the registry token migration acceptance on 8 September 2026.
 
 ## Live acceptance evidence
 

@@ -1,12 +1,12 @@
 specVersion: v0.1.0
 package:
   name: v4_pool_index_consumer
-  version: v0.1.0
+  version: v0.1.1
   url: https://github.com/saturn012/v4-pool-index
   description: Consumer digest composed from the published v4-pool-index map
 
 imports:
-  pools: v4-pool-index@v0.1.1
+  pools: v4-pool-index@v0.1.2
 
 protobuf:
   files:

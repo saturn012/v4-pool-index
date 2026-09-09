@@ -18,7 +18,7 @@ server itself is loopback-only and has no public listener.
 
 Verify without running anything:
 
-- package in the registry, pullable by name: [`v4-pool-index-consumer@v0.1.0`](https://substreams.dev/packages/v4-pool-index-consumer/v0.1.0)
+- package in the registry, pullable by name: [`v4-pool-index-consumer@v0.1.1`](https://substreams.dev/packages/v4-pool-index-consumer/v0.1.1)
 - payment settled on Base Sepolia: [0xf52d84b8…](https://sepolia.basescan.org/tx/0xf52d84b85d0603841a98b17b4e4a42070f7d6c07e46efd8209f8f46b37d420d1)
 
 ## Scope
@@ -43,15 +43,15 @@ For a local stdio MCP client configuration, the two available pool tools, requir
 ## What became easier through package composition
 
 The main composition is producer + consumer through the Substreams registry.
-The consumer imports `v4-pool-index@v0.1.1` by name as
+The consumer imports `v4-pool-index@v0.1.2` by name as
 `pools:map_initialize`; it does not copy or re-run the producer. The
 producer's reusable identity stream becomes a ready input to a downstream
 package, without requiring the consumer to reimplement the producer.
 
 Both packages are published and pullable by name:
 
-- producer: [`v4-pool-index@v0.1.1`](https://substreams.dev/packages/v4-pool-index/v0.1.1)
-- consumer: [`v4-pool-index-consumer@v0.1.0`](https://substreams.dev/packages/v4-pool-index-consumer/v0.1.0)
+- producer: [`v4-pool-index@v0.1.2`](https://substreams.dev/packages/v4-pool-index/v0.1.2)
+- consumer: [`v4-pool-index-consumer@v0.1.1`](https://substreams.dev/packages/v4-pool-index-consumer/v0.1.1)
 
 The same consumer package was checked on two networks using the same block
 for the producer and consumer halves:
@@ -108,7 +108,7 @@ A technical `PASS` means only that available initialize and metadata checks pass
 - Robinhood Chain mainnet: chain ID 4663, PoolManager `0x8366a39cc670b4001a1121b8f6a443a643e40951`, start block `9070`.
 - Base: chain ID 8453, PoolManager `0x498581ff718922c3f8e6a244956af099b2652b2b`, manifest floor `0`; bounded runs can use a relative start such as `-3000`.
 
-The same `map_initialize` module is selected through manifest `network` overrides and `pool_manager` params. The published consumer package is `v4-pool-index-consumer@v0.1.0`; it can be pulled by registry name and is not required to run this repository.
+The same `map_initialize` module is selected through manifest `network` overrides and `pool_manager` params. The published consumer package is `v4-pool-index-consumer@v0.1.1`; it can be pulled by registry name and is not required to run this repository.
 
 ## Live provider evidence and RPC reconciliation
 

@@ -9,7 +9,7 @@ import { composePools, parseStreamTextDetailed } from "./compose.mjs";
 const execFileAsync = promisify(execFile);
 export const PROTOCOL_VERSION = "2025-06-18";
 export const NETWORKS = new Set(["base", "robinhood"]);
-export const SUBSTREAMS_PACKAGE = "v4-pool-index@v0.1.1";
+export const SUBSTREAMS_PACKAGE = "v4-pool-index@v0.1.2";
 export const POOL_ID_PATTERN = /^0x[0-9a-f]{64}$/i;
 const MAX_OUTPUT_BYTES = 1_000_000;
 const QUERY_TIMEOUT_MS = 30_000;

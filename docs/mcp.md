@@ -2,18 +2,17 @@
 
 `v4-pool-index-mcp` is a local stdio MCP server for the repository's existing `map_initialize` Substreams module and the deterministic metadata decision layer. It exposes no HTTP listener, makes no wallet or transaction calls, and does not invoke the Pinax MCP server.
 
-## Prerequisite: local Substreams WASM
+## Prerequisite: published registry package
 
-The stdio server invokes the repository’s local `map_initialize` package, so build its WASM artifact before starting the MCP process:
+The stdio server resolves the published v4-pool-index@v0.1.2 package by registry name. A cold checkout does not need cargo or substreams/target; it needs the Substreams CLI on PATH, Node dependencies, and the normal API token environment supplied by mcp-with-secret.mjs:
 
-```sh
-cd substreams
-cargo build --locked --release --target wasm32-unknown-unknown
-cd ..
-node scripts/mcp.mjs
-```
+    node scripts/mcp-with-secret.mjs
 
-Install the Rust `wasm32-unknown-unknown` target and make the `substreams` CLI available on `PATH`. If the Rust dependencies are already cached, `cargo build --offline --locked --release --target wasm32-unknown-unknown` is an equivalent offline build. The expected artifact is `substreams/target/wasm32-unknown-unknown/release/substreams.wasm`; no network provider call is made by this build step.
+The same cold registry path can be checked without Cargo or a local target artifact:
+
+    substreams run v4-pool-index@v0.1.2 map_initialize --network base --start-block 50994246 --stop-block +1 --output jsonl
+
+The CLI fetches the immutable producer package by name and uses the configured provider; no build step or local WASM file is involved.
 
 ## Client connection
 
@@ -80,9 +79,4 @@ The child receives only PATH, HOME, LANG and the registry token. Inherited debug
 settings and endpoint overrides are omitted. Raw stderr is suppressed; success
 requires exit code zero and the CLI publication success marker.
 
-On 8 September 2026, Substreams 1.22.0 successfully published
-`v4-pool-index-consumer@v0.1.0` with the old registry-token file absent from the
-process's private mount namespace. The old file was removed only after this real
-operation succeeded. Keep the canonical token file; future publication uses the
-command above. For every secret migration, loader tests alone do not authorize
-removal of the old consumer path.
+The current composition publishes producer v4-pool-index@v0.1.2 first and consumer v4-pool-index-consumer@v0.1.1 second with Substreams 1.22.0. The canonical token file remains owner-only; future publication uses the command above. For every secret migration, loader tests alone do not authorize removal of the old consumer path.

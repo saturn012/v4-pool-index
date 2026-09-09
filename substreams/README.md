@@ -22,6 +22,6 @@ The default network is Robinhood. `substreams.yaml` defines `robinhood` and `bas
 
 ## Limits
 
-The package itself does not call Token API, calculate prices, or claim safe execution. Missing volume is reported as `UNKNOWN` by the composition layer. A technical PASS is not proof of liquidity, slippage, transferability, or a successful trade. The package is not published to a Substreams registry in this candidate.
+The package is published as v4-pool-index@v0.1.2. It does not call Token API, calculate prices, or claim safe execution. Missing volume is reported as UNKNOWN by the composition layer, and a technical PASS is not proof of liquidity, slippage, transferability, or a successful trade.
 
 AI tools assisted with implementation, code generation, test construction, documentation, and verification. The human owner supplied requirements, scope and direction decisions, and authorization. Private coordination paths, credentials, server addresses, internal reports, and non-public fixture identities are intentionally omitted from this public artifact.
