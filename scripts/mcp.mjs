@@ -1,8 +1,7 @@
 #!/usr/bin/env node
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { fileURLToPath, pathToFileURL } from "node:url";
-import path from "node:path";
+import { pathToFileURL } from "node:url";
 import process from "node:process";
 import readline from "node:readline";
 import { composePools, parseStreamTextDetailed } from "./compose.mjs";
@@ -10,6 +9,7 @@ import { composePools, parseStreamTextDetailed } from "./compose.mjs";
 const execFileAsync = promisify(execFile);
 export const PROTOCOL_VERSION = "2025-06-18";
 export const NETWORKS = new Set(["base", "robinhood"]);
+export const SUBSTREAMS_PACKAGE = "v4-pool-index@v0.1.1";
 export const POOL_ID_PATTERN = /^0x[0-9a-f]{64}$/i;
 const MAX_OUTPUT_BYTES = 1_000_000;
 const QUERY_TIMEOUT_MS = 30_000;
@@ -75,21 +75,23 @@ function sourceError(error) {
   return new McpError("SOURCE_UNAVAILABLE", "bounded Substreams Initialize query did not complete");
 }
 
+export function buildSubstreamsArgs({ network, startBlock, span }) {
+  return [
+    "run", SUBSTREAMS_PACKAGE, "map_initialize", "--network", network,
+    "--start-block", String(startBlock), "--stop-block", "+" + String(span),
+    "--output", "jsonl", "--limit-processed-blocks", String(Math.max(span + 2, 10)),
+    "--max-retries", "0", "--final-blocks-only",
+  ];
+}
+
 export async function loadPool({ poolId, network, env = process.env, execute = execFileAsync }) {
   const token = String(env.THEGRAPH_TOKEN ?? "").trim();
   if (!token) throw new McpError("MISSING_TOKEN", "THEGRAPH_TOKEN is required in the MCP process environment");
   const window = queryWindows(env)[network];
-  const cwd = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../substreams");
-  const args = [
-    "run", "substreams.yaml", "map_initialize", "--network", network,
-    "--start-block", String(window.startBlock), "--stop-block", `+${window.span}`,
-    "--output", "jsonl", "--limit-processed-blocks", String(Math.max(window.span + 2, 10)),
-    "--max-retries", "0", "--final-blocks-only",
-  ];
+  const args = buildSubstreamsArgs({ network, startBlock: window.startBlock, span: window.span });
   let stdout;
   try {
     ({ stdout } = await execute("substreams", args, {
-      cwd,
       timeout: QUERY_TIMEOUT_MS,
       maxBuffer: MAX_OUTPUT_BYTES,
       env: { ...env, SUBSTREAMS_API_TOKEN: token },
@@ -105,6 +107,7 @@ export async function loadPool({ poolId, network, env = process.env, execute = e
   const pool = parsed.pools.find((candidate) => candidate.pool_id === poolId);
   const provenance = {
     source: "Substreams map_initialize",
+    package: SUBSTREAMS_PACKAGE,
     network,
     search_window: { start_block: window.startBlock, stop_block_exclusive: window.startBlock + window.span, processed_block_limit: Math.max(window.span + 2, 10) },
   };
