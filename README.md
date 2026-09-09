@@ -5,25 +5,27 @@
 **Before you enter a Uniswap v4 pool, know what you are buying — and
 know what nobody can tell you.**
 
-This tool composes two of The Graph's products into a per-pool verdict
-with reasons, sources, and an explicit scope. It answers PASS, REJECT,
-or UNKNOWN, and it never turns missing data into a confident answer:
+This tool composes a published Substreams producer and consumer through
+the registry into a per-pool verdict with reasons, sources, and an explicit
+scope. It answers PASS, REJECT, or UNKNOWN, and it never turns missing data
+into a confident answer:
 "the metadata endpoint has no volume field" is reported as unknown, not
 as "no market".
 
-Agents reach it two ways: an MCP server, and a paid HTTP endpoint where
-the agent settles 0.001 USDC over x402 with no human in the loop.
+Agents reach it two ways: an MCP server, and a paid HTTP endpoint. The x402
+payment and assessment happen without a human in the loop; the assessment
+server itself is loopback-only and has no public listener.
 
 Verify without running anything:
 
+- package in the registry, pullable by name: [`v4-pool-index-consumer@v0.1.0`](https://substreams.dev/packages/v4-pool-index-consumer/v0.1.0)
 - payment settled on Base Sepolia: [0xf52d84b8…](https://sepolia.basescan.org/tx/0xf52d84b85d0603841a98b17b4e4a42070f7d6c07e46efd8209f8f46b37d420d1)
-- package in the registry, pullable by name: `v4-pool-index-consumer`
 
 ## Scope
 
 The project indexes only `PoolManager.Initialize` on Robinhood Chain and Base. The original subgraph stores raw currencies, fee, tick spacing, hooks, initial square-root price, initial tick, block, timestamp, and transaction hash. The Substreams package emits reusable identity fields: `pool_id`, `currency0`, `currency1`, `fee`, `tick_spacing`, and `hooks`.
 
-`Swap` and `ModifyLiquidity` are intentionally out of scope. No path calculates prices or USD values, interprets dynamic fees as fixed percentages, or enables a wallet, transaction, sink, or AlphaScanner bridge.
+`Swap` and `ModifyLiquidity` are intentionally out of scope. No path calculates prices or USD values, interprets dynamic fees as fixed percentages, or enables a trading wallet, trading transaction, sink, or AlphaScanner bridge. The x402 payment is a separate Base Sepolia settlement transaction, not a trading transaction path.
 
 ## Code pointers (verified source commit)
 
@@ -38,11 +40,39 @@ The links below are pinned to source commit `e647f3fa6acf5adc8d3ae40be5be2cad1ce
 
 For a local stdio MCP client configuration, the two available pool tools, required environment variables, bounded lookup windows, and evidence limits, see [docs/mcp.md](docs/mcp.md). The MCP exposes `resolve_pool` and `assess_pool`; it does not open a public port or make trading decisions.
 
-## What became easier through composition
+## What became easier through package composition
 
-In v4, `pool_id` is a hash of the `PoolKey`; the identity stream can tell us which currencies and pool parameters were initialized, but it does not supply token names or holder counts. The Graph Token API (operated by Pinax) supplies standardized token meaning, but it does not know which v4 pool produced the pair. Feeding the first product's output into the second makes one reproducible record that a rules engine can explain. This is a composition of two Graph products, not a claim that the entire Substreams platform cannot expose token metadata.
+The main composition is producer + consumer through the Substreams registry.
+The consumer imports `v4-pool-index@v0.1.1` by name as
+`pools:map_initialize`; it does not copy or re-run the producer. The
+producer's reusable identity stream becomes a ready input to a downstream
+package, without requiring the consumer to reimplement the producer.
 
-The public composition layer is `scripts/compose.mjs`. It consumes JSONL output from `map_initialize`, enriches Base ERC-20 currencies through `https://api.pinax.network/v1/evm/tokens`, preserves native zero-address currencies, and returns provider provenance plus a deterministic technical decision. The CLI now rejects non-empty input that contains no supported JSONL records, while a supported empty `pools` record remains a successful empty result; this keeps malformed or pretty/multiline JSON from silently becoming an empty composition.
+Both packages are published and pullable by name:
+
+- producer: [`v4-pool-index@v0.1.1`](https://substreams.dev/packages/v4-pool-index/v0.1.1)
+- consumer: [`v4-pool-index-consumer@v0.1.0`](https://substreams.dev/packages/v4-pool-index-consumer/v0.1.0)
+
+The same consumer package was checked on two networks using the same block
+for the producer and consumer halves:
+
+- Base block `50994246`: producer `pools=1`; consumer
+  `poolCount=1`, `nonzeroHooks=1`, `dynamicFee=1`; `count_match=PASS`.
+- Robinhood block `56764780`: producer `pools=1`; consumer
+  `poolCount=1`, `nonzeroHooks=0`, `dynamicFee=0`; `count_match=PASS`.
+
+This is the primary composition evidence: a downstream package pulls a
+ready stream of pool identities by registry name on both networks.
+
+Token metadata remains a separate enrichment step from the Pinax Token API.
+The local enrichment layer is `scripts/compose.mjs`: it consumes JSONL
+output from `map_initialize`, enriches Base ERC-20 currencies through
+`https://api.pinax.network/v1/evm/tokens`, preserves native zero-address
+currencies, and returns provider provenance plus a deterministic technical
+decision. The CLI now rejects non-empty input that contains no supported
+JSONL records, while a supported empty `pools` record remains a successful
+empty result; this keeps malformed or pretty/multiline JSON from silently
+becoming an empty composition.
 
 ### Reproducible Base example
 
@@ -54,7 +84,12 @@ A bounded read-only run at Base block `50994246` produced this pool identity:
 - raw fee: `8388608`; tick spacing: `200`; hooks: `0x0469a4bd3724dc86c9542f4694c976da13c450c0`
 - decision: `REJECT`, because the nonzero hooks are not bounded by initialize-only evidence; the dynamic-fee flag in raw fee `8388608` remains `UNKNOWN`, not a fixed percentage
 
-The composed record preserves the Substreams source (`map_initialize`, Base), the Token API endpoint, provider fields, and observation timestamps. In this run the Token API supplied metadata for Base. That endpoint is unsupported for Robinhood Chain in this composition; Robinhood therefore remains Substreams-only here. This is an endpoint-coverage statement, not a claim that the whole platform cannot know token metadata.
+The composed record preserves the Substreams source (`map_initialize`, Base),
+the Pinax Token API endpoint, provider fields, and observation timestamps. In
+this run the Pinax Token API supplied metadata for Base. That endpoint is
+unsupported for Robinhood Chain in this composition; Robinhood therefore
+remains Substreams-only here. This is an endpoint-coverage statement, not a
+claim about the whole platform's metadata capabilities.
 
 ## Deterministic decision layer
 
@@ -75,24 +110,33 @@ A technical `PASS` means only that available initialize and metadata checks pass
 
 The same `map_initialize` module is selected through manifest `network` overrides and `pool_manager` params. The published consumer package is `v4-pool-index-consumer@v0.1.0`; it can be pulled by registry name and is not required to run this repository.
 
-## Live provider evidence
+## Live provider evidence and RPC reconciliation
 
-The Robinhood verification used the live Graph provider endpoint
-`mainnet.robinhood.streamingfast.io:443` and streamed `map_initialize` over
-the latest 5,000 blocks. The finding records 50 `Initialize` events in that
-provider window and one independently decoded event at block `56634095`,
-transaction
-`0x94f1ff233e13e3d004914e992ae29e945498f057829c6a2305d4b62028b69f21`.
-Its pool identity and decoded fields matched the independent log decode.
+A bounded read-only run of this repository's `map_initialize` used the live
+Graph provider endpoint `mainnet.robinhood.streamingfast.io:443` over blocks
+`56634000-56634199`. The module emitted exactly three records:
 
-Method: provider output was treated as the live stream under test; RPC was
-used only to obtain the block number for the recorded event. The referenced
-finding does not contain a complete node-event count, exact node comparison
-range, or totals for misses and false positives. Those provider-vs-node
-metrics are therefore `UNKNOWN/PARTIAL` here rather than being inferred.
-This is a bounded, public-chain, read-only observation; it does not prove
-Token API coverage, current liquidity, hook safety, or execution, and it does
-not imply AlphaScanner production integration.
+| block | pool_id | transaction |
+| --- | --- | --- |
+| `56634006` | `0xf222ce57ec6eda4048e3942e0dc1f3b7dceefdf6568a9a1cd68d3db656ce9603` | `0xb004ebbe14180f51e9c6a851daf457f9e0088542eda70c0fb7f735ba45dede6b` |
+| `56634066` | `0x40724f42e574e24b46eb56a9cdd9fed3a80ad2af29dbd03a9c1fddcac8cd4565` | `0xe7fc8d16301619f8542198d0dd06f3d83dd866bf3f8b6d5783f9ec17638edba5` |
+| `56634095` | `0x74d24eb80e63c9008fa1fa845a05162fa18e44d97e7afc5f45f70bb70105aed2` | `0x94f1ff233e13e3d004914e992ae29e945498f057829c6a2305d4b62028b69f21` |
+
+The truth source for the reconciliation was an `eth_getLogs` query to
+`https://rpc.mainnet.chain.robinhood.com` for the same inclusive window,
+filtered to PoolManager
+`0x8366a39cc670b4001a1121b8f6a443a643e40951` and Initialize topic0
+`0xdd466e674ea557f56295e2d0218a125ea4b4f0f6f3307b95f85e6110838d6438`.
+The node returned three logs; the module returned three records:
+`misses=0`, `false_positives=0`, and `identity_mismatches=0`. For every
+record, `pool_id`, `currency0`, `currency1`, `fee`, `tick_spacing`, and
+`hooks` matched the RPC decode. The transaction hashes above anchor the
+three node logs to their corresponding blocks.
+
+This is one 200-block window on one network, not a continuous audit of the
+chain's history. It is a live, public-chain, read-only observation; it does
+not prove current liquidity, hook safety, or execution, and it does not
+imply AlphaScanner production integration.
 
 ## Reproduce
 
