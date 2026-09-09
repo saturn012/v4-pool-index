@@ -1,6 +1,47 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { checkBalances, checkDependencies, createSafePayerClient, DEFAULT_PAYER_ADDRESS, graphEnvironment, runOfflineDemo, runPreflight, safeMainErrorMessage, withOwnedServer } from "./demo.mjs";
+import { buildSubstreamsArgs, loadPool, SUBSTREAMS_PACKAGE } from "./mcp.mjs";
+
+test("demo resolves its source from the pinned registry package, not a local WASM manifest", () => {
+  const args = buildSubstreamsArgs({ network: "base", startBlock: 50994246, span: 1 });
+  assert.deepEqual(args.slice(0, 3), ["run", SUBSTREAMS_PACKAGE, "map_initialize"]);
+  assert.equal(args.includes("substreams.yaml"), false);
+});
+
+test("loadPool executes the pinned registry package and reports its provenance", async () => {
+  const output = JSON.stringify({
+    "@module": "map_initialize",
+    "@block": 50994246,
+    "@type": "pool.v1.PoolInitializations",
+    "@data": {
+      pools: [{
+        poolId: "0xfa7714c40e1de3c702b8c8052230072d41f3f36f949bca2a26e9147d678a3c22",
+        currency0: "0xd84af51aae54fe6df667e83a66291529b5456cdd",
+        currency1: "0xf67fcf24bbbff934c79ffb09399122482a25594d",
+        fee: 8388608,
+        tickSpacing: 200,
+        hooks: "0x0469a4bd3724dc86c9542f4694c976da13c450c0",
+      }],
+    },
+  });
+  let captured;
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => ({ ok: true, json: async () => ({ data: [] }) });
+  try {
+    const result = await loadPool({
+      poolId: "0xfa7714c40e1de3c702b8c8052230072d41f3f36f949bca2a26e9147d678a3c22",
+      network: "base",
+      env: { THEGRAPH_TOKEN: "synthetic-test-token" },
+      execute: async (_binary, args) => { captured = args; return { stdout: output }; },
+    });
+    assert.deepEqual(captured.slice(0, 3), ["run", SUBSTREAMS_PACKAGE, "map_initialize"]);
+    assert.equal(captured.includes("substreams.yaml"), false);
+    assert.equal(result.provenance.package, SUBSTREAMS_PACKAGE);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
 
 test("dependency preflight names every missing runtime dependency", async () => {
   const result = await checkDependencies({
