@@ -29,14 +29,54 @@ test("preflight aggregates all missing prerequisites", async () => {
   assert.deepEqual(result.checks.map((item) => item.name), ["npm dependencies", "substreams CLI", "Graph token", "Token API", "payer key", "payer balances", "assessment server"]);
 });
 
-test("RPC/balance failure is UNKNOWN and never treated as zero", async () => {
+test("unknown RPC leaves gas advisory and does not assume USDC is zero", async () => {
   const result = await checkBalances({
     address: "0x1111111111111111111111111111111111111111",
     fetchImpl: async () => { throw new Error("RPC unavailable"); },
   });
-  assert.equal(result.checks[0].status, "UNKNOWN");
+  assert.equal(result.checks[0].status, "PASS");
   assert.equal(result.checks[1].status, "UNKNOWN");
-  assert.match(result.checks[0].message, /not treat it as zero/);
+  assert.match(result.checks[0].message, /facilitator pays gas/);
+  assert.doesNotMatch(result.checks[0].message, /faucet/i);
+  assert.match(result.checks[1].message, /not treat it as zero/);
+});
+
+test("zero payer ETH is advisory and does not block preflight", async () => {
+  const fetchImpl = async (_url, options) => {
+    const { method } = JSON.parse(options.body);
+    const result = method === "eth_chainId"
+      ? "0x14a34"
+      : method === "eth_getBalance"
+        ? "0x0"
+        : "0x989680";
+    return {
+      ok: true,
+      json: async () => ({ jsonrpc: "2.0", id: 1, result }),
+    };
+  };
+  const result = await runPreflight({
+    env: {},
+    adapters: {
+      dependencies: async () => ({ status: "PASS", name: "npm dependencies", message: "ok" }),
+      substreams: () => ({ status: "PASS", name: "substreams CLI", message: "ok" }),
+      loadToken: async () => "token",
+      tokenApi: async () => ({ status: "PASS", name: "Token API", message: "ok" }),
+      deriveAddress: async () => ({
+        status: "PASS",
+        name: "payer key",
+        message: "public address",
+        address: DEFAULT_PAYER_ADDRESS,
+      }),
+      fetchImpl,
+      balances: ({ address, fetchImpl: requestFetch }) => checkBalances({ address, fetchImpl: requestFetch }),
+      server: async () => ({ status: "PASS", name: "assessment server", message: "ok" }),
+    },
+  });
+  assert.equal(result.ok, true);
+  const gas = result.checks.find((item) => item.name === "payer gas balance");
+  assert.equal(gas.status, "PASS");
+  assert.match(gas.message, /facilitator pays gas/);
+  assert.doesNotMatch(gas.message, /faucet/i);
 });
 
 test("offline path renders only fixture steps and makes no fetch call", async () => {

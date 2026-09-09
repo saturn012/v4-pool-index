@@ -12,10 +12,8 @@ export const DEFAULT_PAYER_ADDRESS = "0x76eFfFAec43eFaefa64eE71BFEb2963f608fC4A4
 export const ASSESS_HOST = "127.0.0.1";
 export const ASSESS_PORT = 4021;
 export const BASE_SEPOLIA_RPC = "https://sepolia.base.org";
-export const BASE_SEPOLIA_FAUCET = "https://www.alchemy.com/faucets/base-sepolia";
 export const USDC_FAUCET = "https://faucet.circle.com/";
 export const USDC_DECIMALS = 6;
-export const MIN_GAS_WEI = 200_000_000_000_000n;
 export const PLANNED_RUNS = 2;
 
 const PACKAGE_FILE = fileURLToPath(new URL("../package.json", import.meta.url));
@@ -161,16 +159,18 @@ export async function checkBalances({ address, asset = "0x036CbD53842c5426634e79
     const eth = BigInt(ethHex);
     const usdc = BigInt(usdcHex);
     const requiredUsdc = amountAtomic * BigInt(PLANNED_RUNS);
-    const ethCheck = eth >= MIN_GAS_WEI
-      ? status("payer gas balance", "PASS", `${formatUnits(eth, 18)} ETH on Base Sepolia`)
-      : status("payer gas balance", "FAIL", `${formatUnits(eth, 18)} ETH is below the ${formatUnits(MIN_GAS_WEI, 18)} ETH two-run gas floor; faucet: ${BASE_SEPOLIA_FAUCET}; address: ${address}`);
+    const ethCheck = status(
+      "payer gas balance",
+      "PASS",
+      `${formatUnits(eth, 18)} ETH on Base Sepolia; advisory only; x402 exact facilitator pays gas; payer ETH is not required`,
+    );
     const usdcCheck = usdc >= requiredUsdc
       ? status("payer USDC balance", "PASS", `${formatUnits(usdc, USDC_DECIMALS)} USDC; two-run plan requires ${formatUnits(requiredUsdc, USDC_DECIMALS)} USDC`)
       : status("payer USDC balance", "FAIL", `${formatUnits(usdc, USDC_DECIMALS)} USDC is below the two-run plan ${formatUnits(requiredUsdc, USDC_DECIMALS)} USDC; faucet: ${USDC_FAUCET}; address: ${address}`);
     return { checks: [ethCheck, usdcCheck], balances: { eth, usdc, requiredUsdc } };
   } catch (_) {
     return { checks: [
-      status("payer gas balance", "UNKNOWN", `Base Sepolia ETH balance is unknown; do not treat it as zero; faucet: ${BASE_SEPOLIA_FAUCET}; address: ${address}`),
+      status("payer gas balance", "PASS", "Base Sepolia ETH balance is unknown; gas check is advisory only; x402 exact facilitator pays gas; payer ETH is not required"),
       status("payer USDC balance", "UNKNOWN", `Base Sepolia USDC balance is unknown; do not treat it as zero; faucet: ${USDC_FAUCET}; address: ${address}`),
     ] };
   }
