@@ -20,6 +20,7 @@ Verify without running anything:
 
 - package in the registry, pullable by name: [`v4-pool-index-consumer@v0.1.1`](https://substreams.dev/packages/v4-pool-index-consumer/v0.1.1)
 - payment settled on Base Sepolia: [0xf52d84b8…](https://sepolia.basescan.org/tx/0xf52d84b85d0603841a98b17b4e4a42070f7d6c07e46efd8209f8f46b37d420d1)
+- paid HTTP 200 + verdict evidence: [2026-09-11 paid run](docs/evidence/2026-09-11_paid-run.md)
 
 ## Scope
 
