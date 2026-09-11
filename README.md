@@ -49,6 +49,8 @@ The consumer imports `v4-pool-index@v0.1.2` by name as
 producer's reusable identity stream becomes a ready input to a downstream
 package, without requiring the consumer to reimplement the producer.
 
+The shared typed identity stream makes the standards leverage concrete: the PoolManager address is a parameter, not a chain-bound Rust constant. Adding the third network, BSC, therefore required one manifest entry and zero Rust lines; its existing 200-block verification emitted two records through that same stream. Downstream packages do not need to rewrite `Initialize` parsing for each network or each consumer; they receive the ready typed identity flow.
+
 Both packages are published and pullable by name:
 
 - producer: [`v4-pool-index@v0.1.2`](https://substreams.dev/packages/v4-pool-index/v0.1.2)
