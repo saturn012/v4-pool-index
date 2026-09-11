@@ -134,6 +134,14 @@ record, `pool_id`, `currency0`, `currency1`, `fee`, `tick_spacing`, and
 `hooks` matched the RPC decode. The transaction hashes above anchor the
 three node logs to their corresponding blocks.
 
+### BSC bounded verification
+
+A bounded read-only run of the local map_initialize module used the BSC manifest entry and provider endpoint bnb.streamingfast.io:443 over blocks 121217205-121217404 (200 blocks). The manifest PoolManager is 0x28e2ea090877bf75740558f6bfb36a5ffee9e9df, with deployment initialBlock 45970610 verified from transaction 0x64b395f1b0b3c734a477c802bc8cc3ce394f328c651290d0d166946048487bbe.
+
+The same inclusive window was queried with eth_getLogs at https://bsc-rpc.publicnode.com, filtered to the same PoolManager and Initialize topic0. RPC count=2; module count=2; misses=0; false_positives=0; field_mismatches=0. The two records were at blocks 121217252 and 121217332.
+
+This is a bounded read-only observation of the same chain used by the trading layer, not a claim of product integration. The published v4-pool-index@v0.1.2 package and the Robinhood/Base paths were not changed or republished.
+
 This is one 200-block window on one network, not a continuous audit of the
 chain's history. It is a live, public-chain, read-only observation; it does
 not prove current liquidity, hook safety, or execution, and it does not
