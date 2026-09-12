@@ -1,5 +1,7 @@
 # ETHOnline 2026 — public specification for the Initialize module
 
+> Historical development artifact. Status, version and publication statements below describe that task stage. For the current released state, use [the review guide](judge-guide.md).
+
 Status: offline implementation complete; live provider and publication intentionally not performed.
 
 ## Goal

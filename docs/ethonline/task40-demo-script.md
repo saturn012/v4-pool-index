@@ -1,5 +1,7 @@
 # Task 40 demo script (2–4 minutes, 720p+)
 
+> Historical development artifact. Status, version and publication statements below describe that task stage. For the current released state, use [the review guide](judge-guide.md).
+
 Use a screen recording with the owner's real voice. Do not add synthetic narration, speed-up, or phone footage.
 
 1. (0:00–0:25) State the problem: a v4 `pool_id` is a hash of a `PoolKey`, while token meaning lives in a separate standardized product.

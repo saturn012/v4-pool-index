@@ -1,5 +1,7 @@
 # ETHOnline 2026 — public implementation prompt (sanitized)
 
+> Historical development artifact. Status, version and publication statements below describe that task stage. For the current released state, use [the review guide](judge-guide.md).
+
 Implement a minimal, offline-testable Substreams package for the existing Uniswap v4 Initialize indexer.
 
 Use the public PoolManager ABI and `substreams-ethereum` code generation. Create one composable map from `sf.ethereum.type.v2.Block` to a protobuf list of `pool_id`, `currency0`, `currency1`, `fee`, `tick_spacing`, and `hooks`. Keep the existing subgraph files. Do not add Swap or ModifyLiquidity, provider probes, authentication, publication, wallets, transactions, or private application data.

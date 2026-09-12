@@ -1,5 +1,7 @@
 # ETHOnline 2026 — public implementation plan and result
 
+> Historical development artifact. Status, version and publication statements below describe that task stage. For the current released state, use [the review guide](judge-guide.md).
+
 ## Plan
 
 1. Preserve the original Graph subgraph and confirm the public ABI.

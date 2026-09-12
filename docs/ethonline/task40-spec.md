@@ -1,5 +1,7 @@
 # ETHOnline 2026 — Task 40 public specification
 
+> Historical development artifact. Status, version and publication statements below describe that task stage. For the current released state, use [the review guide](judge-guide.md).
+
 Status: implementation candidate on a task branch; live provider evidence is recorded privately and the package is not published.
 
 ## Composition contract
