@@ -5,12 +5,12 @@
 **Before you enter a Uniswap v4 pool, know what you are buying — and
 know what nobody can tell you.**
 
-This tool composes a published Substreams producer and consumer through
-the registry into a per-pool verdict with reasons, sources, and an explicit
-scope. It answers PASS, REJECT, or UNKNOWN, and it never turns missing data
-into a confident answer:
-"the metadata endpoint has no volume field" is reported as unknown, not
-as "no market".
+A published Substreams producer supplies a typed stream of pool identities.
+A published consumer imports that stream through the registry and computes
+pool statistics. A separate assessment path reads the producer directly,
+adds Pinax Token API metadata, and returns PASS, REJECT, or UNKNOWN with
+reasons, sources, and an explicit scope. Missing volume is reported as
+unknown; it is never interpreted as an absent market.
 
 Agents reach it two ways: an MCP server, and a paid HTTP endpoint. The x402
 payment and assessment happen without a human in the loop; the assessment
@@ -19,12 +19,25 @@ server itself is loopback-only and has no public listener.
 Verify without running anything:
 
 - package in the registry, pullable by name: [`v4-pool-index-consumer@v0.1.1`](https://substreams.dev/packages/v4-pool-index-consumer/v0.1.1)
-- payment settled on Base Sepolia: [0xf52d84b8…](https://sepolia.basescan.org/tx/0xf52d84b85d0603841a98b17b4e4a42070f7d6c07e46efd8209f8f46b37d420d1)
+- payment settled on Base Sepolia: [0xc2cb8f09…](https://sepolia.basescan.org/tx/0xc2cb8f09373c57f077660e855ca0685ce14b5d924401860200f51698130bcbdd)
 - paid HTTP 200 + verdict evidence: [2026-09-11 paid run](docs/evidence/2026-09-11_paid-run.md)
+
+For a short path through the code and evidence, use the [review and
+reproduction guide](docs/ethonline/judge-guide.md).
+
+## Continuity: prior work and this submission
+
+AlphaScanner is the owner's pre-existing private Telegram signal and BNB
+Chain execution product. Those systems are outside this submission. The
+public history here begins on 5 September 2026 and contains the new
+pool-identity and assessment component, alongside attributed upstream
+libraries and generated material. Integration into the existing product
+is unfinished; no production bridge is claimed. See the full
+[Continuity and AI disclosure](docs/ethonline/continuity.md).
 
 ## Scope
 
-The project indexes only `PoolManager.Initialize` on Robinhood Chain and Base. The original subgraph stores raw currencies, fee, tick spacing, hooks, initial square-root price, initial tick, block, timestamp, and transaction hash. The Substreams package emits reusable identity fields: `pool_id`, `currency0`, `currency1`, `fee`, `tick_spacing`, and `hooks`.
+The published packages index only `PoolManager.Initialize` on Robinhood Chain and Base. The local producer manifest additionally contains the bounded BSC extension documented below. The original subgraph stores raw currencies, fee, tick spacing, hooks, initial square-root price, initial tick, block, timestamp, and transaction hash. The Substreams package emits reusable identity fields: `pool_id`, `currency0`, `currency1`, `fee`, `tick_spacing`, and `hooks`.
 
 `Swap` and `ModifyLiquidity` are intentionally out of scope. No path calculates prices or USD values, interprets dynamic fees as fixed percentages, or enables a trading wallet, trading transaction, sink, or AlphaScanner bridge. The x402 payment is a separate Base Sepolia settlement transaction, not a trading transaction path.
 
@@ -43,11 +56,12 @@ For a local stdio MCP client configuration, the two available pool tools, requir
 
 ## What became easier through package composition
 
-The main composition is producer + consumer through the Substreams registry.
-The consumer imports `v4-pool-index@v0.1.2` by name as
-`pools:map_initialize`; it does not copy or re-run the producer. The
-producer's reusable identity stream becomes a ready input to a downstream
-package, without requiring the consumer to reimplement the producer.
+The package-composition demonstration is producer + statistics consumer
+through the Substreams registry. The consumer imports
+`v4-pool-index@v0.1.2` by name as `pools:map_initialize` and uses its output
+without copying the decoder. The assessment served by MCP/x402 reads the
+producer directly and enriches it through Pinax; it does not consume the
+statistics package. Both paths reuse the same typed pool identity.
 
 The shared typed identity stream makes the standards leverage concrete: the PoolManager address is a parameter, not a chain-bound Rust constant. Adding the third network, BSC, therefore required one manifest entry and zero Rust lines; its existing 200-block verification emitted two records through that same stream. Downstream packages do not need to rewrite `Initialize` parsing for each network or each consumer; they receive the ready typed identity flow.
 
@@ -158,10 +172,10 @@ cargo build --release --target wasm32-unknown-unknown
 substreams pack substreams.yaml
 substreams run substreams.yaml map_initialize --network base --start-block -3000 --stop-block +300 --output jsonl > /tmp/base-initialize.jsonl
 cd ..
-node scripts/compose.mjs --network base --token-file ./local-token.txt --input /tmp/base-initialize.jsonl --limit 1
+node scripts/compose.mjs --network base --token-file /secure/path/pinax-token.txt --input /tmp/base-initialize.jsonl --limit 1
 ```
 
-Keep the bearer token in a local file ignored by your environment. Do not put it in a shell argument, repository file, or log. The composition CLI reads it in-process and never prints it. The exact provider endpoint and authentication setup are account-dependent.
+Supply Substreams authentication through its `SUBSTREAMS_API_TOKEN` process environment using your secret manager. Replace `/secure/path/pinax-token.txt` with an owner-only bearer-token file outside the repository. Do not put it in a shell argument, repository file, or log. The composition CLI reads it in-process and never prints it. The exact provider endpoint and authentication setup are account-dependent.
 
 ## Original subgraph reproduction
 
@@ -214,7 +228,7 @@ dictionary sequences but does not validate their checksum.
 
 ## ETHOnline public artifacts
 
-The files under `docs/ethonline/` are safe public versions of the specification, implementation prompt, plan, and demo script. Private coordination paths, server addresses, credentials, internal reports, and non-public fixture identities are intentionally omitted. This repository does not claim partner-prize acceptance; live evidence, continuity history, publication, and the owner-recorded demo remain separate gates.
+The [development archive](docs/ethonline/development-artifacts.md) indexes earlier public specifications, prompts and plans, plus clearly labeled retrospective component specifications. Historical documents are labeled; [current submission copy](docs/ethonline/submission.md), the [demo script](docs/ethonline/demo-script.md), and [verification report](ethonline-verification.md) describe the finalization. Private coordination paths, server addresses, credentials, internal reports, and non-public fixture identities are intentionally omitted. This repository does not claim partner-prize acceptance; live evidence, continuity history, publication, and the owner-recorded demo remain separate gates.
 
 ## AI assistance disclosure
 

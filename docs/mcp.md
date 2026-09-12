@@ -4,7 +4,7 @@
 
 ## Prerequisite: published registry package
 
-The stdio server resolves the published v4-pool-index@v0.1.2 package by registry name. A cold checkout does not need cargo or substreams/target; it needs the Substreams CLI on PATH, Node dependencies, and the normal API token environment supplied by mcp-with-secret.mjs:
+The stdio server resolves the published v4-pool-index@v0.1.2 package by registry name. A cold checkout does not need cargo or substreams/target; it needs the Substreams CLI on PATH, Node dependencies, and either an inherited `THEGRAPH_TOKEN` or an explicit protected `THEGRAPH_TOKEN_FILE` supplied to mcp-with-secret.mjs:
 
     node scripts/mcp-with-secret.mjs
 
@@ -12,7 +12,7 @@ The same cold registry path can be checked without Cargo or a local target artif
 
     substreams run v4-pool-index@v0.1.2 map_initialize --network base --start-block 50994246 --stop-block +1 --output jsonl
 
-The CLI fetches the immutable producer package by name and uses the configured provider; no build step or local WASM file is involved.
+For this standalone CLI command, configure `SUBSTREAMS_API_TOKEN` through your secret manager and select the appropriate provider endpoint. The MCP launcher performs that token mapping for MCP calls, not for unrelated shell commands. The CLI fetches the immutable producer package by name and uses the configured provider; no build step or local WASM file is involved.
 
 ## Client connection
 
@@ -25,7 +25,7 @@ Use a client that supports newline-delimited stdio MCP JSON-RPC, such as Claude 
       "command": "node",
       "args": ["/path/to/v4-pool-index/scripts/mcp-with-secret.mjs"],
       "env": {
-        "THEGRAPH_TOKEN_FILE": "/home/hermes/.hermes/secrets/thegraph.token",
+        "THEGRAPH_TOKEN_FILE": "/secure/path/thegraph.token",
         "SUBSTREAMS_ENDPOINT_BASE": "base.substreams.pinax.network:443",
         "SUBSTREAMS_ENDPOINT_ROBINHOOD": "robinhood.substreams.pinax.network:443",
         "MCP_BASE_START_BLOCK": "50994246",
@@ -37,7 +37,7 @@ Use a client that supports newline-delimited stdio MCP JSON-RPC, such as Claude 
 }
 ```
 
-`mcp-with-secret.mjs` reads `THEGRAPH_TOKEN_FILE` (default: the canonical path shown above) into `THEGRAPH_TOKEN` only in the MCP process environment. The value is never accepted as an argument, emitted in an MCP response, or written to repository files. It is passed in-process to the existing Substreams CLI as `SUBSTREAMS_API_TOKEN` and to the Base Token API bearer header. The legacy `thegraph_token.txt` is not changed by this launcher: root must map every actual external consumer before any migration or deletion.
+`mcp-with-secret.mjs` preserves an inherited nonempty `THEGRAPH_TOKEN`; otherwise it reads `THEGRAPH_TOKEN_FILE` into the MCP process environment. Set the file path explicitly on your machine; the implementation fallback is deployment-specific. The file must be owned by the current user with no group/other permission bits (for example mode 600). The value is never accepted as an argument, emitted in an MCP response, or written to repository files. It is passed in-process to the existing Substreams CLI as `SUBSTREAMS_API_TOKEN` and to the Base Token API bearer header. The launcher does not migrate or delete any existing credential files.
 
 The checked-in defaults use the already verified one-block evidence windows shown above. An owner can update the three bounded range variables for another reviewable window; the span is capped at 100 blocks. A requested `pool_id` outside that window returns `POOL_NOT_FOUND`, rather than silently searching an unbounded history.
 
@@ -67,16 +67,16 @@ For a supervised live invocation, set `THEGRAPH_TOKEN` in the process environmen
 
 ## Registry publication with the canonical token
 
-The launcher reads `~/.hermes/secrets/substreams-registry.token` (owner-only file)
-into `SUBSTREAMS_REGISTRY_TOKEN` and invokes `/usr/local/bin/substreams registry
+The publication launcher reads the owner-only file selected by
+`SUBSTREAMS_REGISTRY_TOKEN_FILE` into `SUBSTREAMS_REGISTRY_TOKEN` and invokes `/usr/local/bin/substreams registry
 publish <absolute-package.spkg> --yes`. Pass exactly one existing local `.spkg`:
 
 ```sh
-node scripts/registry-publish-with-secret.mjs /absolute/package.spkg
+SUBSTREAMS_REGISTRY_TOKEN_FILE=/secure/path/registry.token node scripts/registry-publish-with-secret.mjs /absolute/package.spkg
 ```
 
 The child receives only PATH, HOME, LANG and the registry token. Inherited debug
 settings and endpoint overrides are omitted. Raw stderr is suppressed; success
 requires exit code zero and the CLI publication success marker.
 
-The current composition publishes producer v4-pool-index@v0.1.2 first and consumer v4-pool-index-consumer@v0.1.1 second with Substreams 1.22.0. The canonical token file remains owner-only; future publication uses the command above. For every secret migration, loader tests alone do not authorize removal of the old consumer path.
+The current composition publishes producer v4-pool-index@v0.1.2 first and consumer v4-pool-index-consumer@v0.1.1 second with Substreams 1.22.0. The token file must remain owner-only. This is a maintainer publication procedure, not a judge reproduction step; the existing published versions need no new publication. For every secret migration, loader tests alone do not authorize removal of the old consumer path.
